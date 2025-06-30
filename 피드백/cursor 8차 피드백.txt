@@ -1,0 +1,69 @@
+📩 Cursor AI 피드백 (7차 정리 기반 + 추가 명확화)
+이번 피드백 정리 반영해줘. 전체 구조는 아래 정리한 내용을 그대로 유지하면서, 다음 세 가지 부분을 명확하게 명시 또는 확정해줬으면 좋겠어.
+
+✅ 1. 루틴의 performed_dates와 failed_logs의 구분
+루틴의 수행 이력을 기록하는 performed_dates에는 성공한 수행 기록만 저장하고, 실패한 경우는 failed_logs에만 저장하도록 명시해줘.
+
+같은 날짜가 두 곳에 중복으로 기록되지 않도록, 이 규칙을 구조 설계 문서에 확실하게 반영해줘.
+
+예: performed_dates = [{ date: "2025-06-19", success: true }]
+반면 failed_logs = [{ date: "2025-06-20", reason: "...", ... }]
+
+✅ 2. 루틴 category 필드 구조 확정
+루틴의 카테고리 필드는 단일 TEXT 필드로 확정할게.
+
+고정된 기본 카테고리는 UI에서 추천값으로 제공하고, 사용자는 직접 원하는 문자열을 입력할 수 있도록.
+
+이전에 예시로 줬던 category + custom_category 식 분리 구조는 사용하지 않음.
+
+예: "category": "명상" (TEXT 단일 필드)
+
+✅ 3. 루틴이 포함된 프로젝트의 진행률 제외 명시
+project의 자식으로 routine이 포함된 경우, 진행률 계산에서는 루틴을 무시하는 정책은 잘 반영되어 있음.
+
+이 정책을 분석 탭의 통계 그래프에서도 동일하게 적용한다는 점을 문서에 명확히 써줘.
+
+예: project의 완료율 분석 그래프에서 routine의 수행률은 포함되지 않음
+
+
+다음 항목들이 반드시 포함되어야 함:
+
+✅ 1. 트리 구조 핵심 설명 요약
+diff
+복사
+편집
+- 목표(goal) 중심 트리 구조, 각 노드는 명확한 타입
+- 프로젝트(project)는 기간을 가지며 goal, task, routine 등을 포함 가능
+- 마일스톤은 타입이 아니라 특성 (is_milestone: true)
+- milestone_group 하위 노드는 자동으로 마일스톤 특성
+✅ 2. 루틴 관련 설계 핵심
+diff
+복사
+편집
+- 루틴은 반복되는 행동, task는 단발성
+- 루틴은 수행률 계산 (주간/월간)
+- 루틴 실패 기록은 failed_logs에 저장 (성공만 performed_dates에 저장)
+- 루틴 category는 고정 분류 + 사용자 정의 허용 (단일 TEXT 권장)
+✅ 3. 감정일기 관련 핵심
+diff
+복사
+편집
+- mood_tag는 TEXT (ENUM 아님), 사용자 정의 허용
+- 하루 여러 개 작성 가능
+- routine과 직접 연동은 없음 (추후 linked_routine_id 확장 가능)
+✅ 4. 주요 정책 요약
+diff
+복사
+편집
+- 진행률은 goal/project만 표시, routine 포함 시 제외
+- 트리뷰 고정 노드는 사용자 지정 방식
+- aspiration은 트리와 무관, linked_goal_id 필드로 추후 전환 고려
+- soft-delete 정책 존재
+✅ 5. 데이터 스키마 요약
+makefile
+복사
+편집
+공통: id, type, title, parent_id, created_at, deleted 등  
+goal/project/task: is_milestone, milestone_date  
+routine: category, performed_dates, failed_logs, difficulty_history  
+emotion_journal: mood_tag(TEXT), linked_routine_id(optional)  

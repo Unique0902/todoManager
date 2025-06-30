@@ -1,0 +1,32 @@
+🔄 7차 피드백 (사양 조정 및 세부 반영 요청)
+1. emotion_journal의 mood_tag 필드는 TEXT 유지
+ENUM 형태가 아니라, 사용자 정의 감정 태그 입력 가능하게 유지
+
+기본 감정 목록은 프론트에서 추천값으로 제공
+
+2. project의 자식 노드로 goal 허용
+트리 구조상 project > goal 구성 가능하게 변경
+
+트리 유연성 확보 목적
+
+3. routine.category 필드 구조 변경
+고정된 기본 카테고리 + 사용자 정의 카테고리 입력 허용
+
+구조 예시:
+
+json
+복사
+편집
+category: "감정관리",  
+custom_category: "명상"
+또는 TEXT 단일 필드로 처리하고 추천값만 UI에서 제공
+
+4. emotion_journal ↔ routine.failed_logs 간 연동 없음 (MVP)
+단, 추후 확장 가능성 고려하여 구조 설계 시 여지 확보
+
+예: emotion_journal에 linked_routine_id 필드 도입 가능성 고려 등
+
+5. 트리뷰 상단 고정 노드는 사용자 지정 방식
+시스템 자동 고정 아님
+
+사용자가 원하는 goal, project 노드를 수동 고정

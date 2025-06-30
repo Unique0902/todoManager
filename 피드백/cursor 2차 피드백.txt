@@ -1,0 +1,102 @@
+✅ 잘 이해한 부분 다시 요약
+마일스톤 특성은 type이 아니라 속성이고, milestone_group 자식에만 자동 부여 → 정확
+
+goal vs project의 구분, 루틴과 감정일기 분리, 진행률 계산 조건 등 → 정확
+
+트리뷰 정책(자식 추가만, 상세페이지에서 수정/삭제) → 네가 강조한 UX 방침까지 잘 반영
+
+감정일기 구조에서 선택적 루틴 연결 가능 → 의도대로 이해됨
+
+routine에 수행률/난이도 조정 기능 포함 → 정확
+
+⚠️ 확인 또는 다듬으면 좋은 점
+1. milestone_date 필드 위치
+milestone_date는 milestone 특성을 가진 노드에서만 필요하니까,
+goal, project, task 등에서 is_milestone: true일 경우에만 의미 있음.
+→ goal, project, task 등에 공통 필드로 들어가는 게 맞지만, 설명에 조건부 필드임을 명확히 해주면 좋겠음.
+
+sql
+복사
+편집
+-- goal/project/task 중 is_milestone: true이면 milestone_date 필수
+milestone_date (nullable, only if is_milestone = true)
+2. task에 order_index 필드도 있으면 좋을 듯
+milestone_group 안에서 task들이 milestone 특성 가질 경우, 순서도 중요하니
+→ task에도 order_index 추가 제안.
+
+3. routine에 루틴 유형 구분 필요?
+예: 감정일기 루틴 / 외형관리 루틴 등
+이걸 태그로 할지, category 필드로 가질지는 결정해야겠지만,
+루틴을 묶어서 시각화하거나 비교할 때 유용할 수 있음.
+
+4. aspiration(하고 싶은 것)에도 카테고리나 연결 기능 향후 고려 가능
+현재는 독립적인 저장소지만,
+→ 나중에 목표나 프로젝트로 전환할 때를 대비해 linked_goal_id 같은 필드를 비워둬도 됨.
+
+5. emotion_journal에 mood 선택 필드(선택사항)
+예: '기쁨', '불안', '좌절', '보람' 등의 선택형 감정 값을 기록하는 간단한 필드
+→ 추후 통계나 분석에서 감정 흐름을 시각화하는 데 유용함
+
+sql
+복사
+편집
+mood_tag (nullable, ENUM or TEXT)
+6. 삭제된 노드 soft-delete 방식
+너가 deleted 필드를 쓰는 구조로 잡은 것도 좋은 선택이야
+→ 노드 복구 기능, 히스토리 기능을 위해서도 필요함
+
+7. ✅ 루틴 난이도 변경 히스토리 구조 보완
+단순 난이도 수준(쉬움/보통/어려움)이 아니라
+"이전보다 더 어려워졌는지 / 쉬워졌는지"를 명확히 보여주는 구조로 기록
+
+구조 예시:
+
+json
+복사
+편집
+{
+  date: "2025-06-01",
+  change: "increase" | "decrease" | "edit",
+  reason: "...",
+  before_description: "...",
+  after_description: "..."
+}
+히스토리로부터 난이도 조정 추이 분석 가능해야 함
+
+8. ✅ 루틴 전체 내용 변경도 히스토리 남겨야 함
+단순히 수행 횟수 기록이 아니라,
+루틴의 내용이 바뀔 때마다 (예: 설명 수정, 구성 변경 등) 수정 이력도 저장
+
+추후 루틴 리디자인, 분석 등에 필요함
+
+예시
+✅ 루틴 난이도 조정 히스토리 구조 (이전/이후 비교 중심)
+json
+복사
+편집
+difficulty_history: [
+  {
+    date: "2025-06-01",
+    change: "increase", // 또는 "decrease" or "edit"
+    reason: "너무 쉬워져서",         // 선택사항
+    before_description: "매일 10분 스트레칭",
+    after_description: "매일 20분 스트레칭 + 스쿼트 30개"
+  },
+  {
+    date: "2025-06-10",
+    change: "decrease",
+    reason: "출근 준비 시간 부족",
+    before_description: "20분 스트레칭 + 스쿼트 30개",
+    after_description: "10분 스트레칭만"
+  },
+  {
+    date: "2025-06-14",
+    change: "edit",  // 난이도 수준은 그대로지만 설명만 수정
+    reason: "스트레칭 순서 정리",
+    before_description: "10분 스트레칭만",
+    after_description: "하체 위주 10분 스트레칭"
+  }
+]
+
+
+🎯 결론

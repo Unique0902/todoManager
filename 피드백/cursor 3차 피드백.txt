@@ -1,0 +1,56 @@
+✅ 루틴 관련 최종 정리 사항 (수정 반영 버전)
+📌 루틴 기본 필드 구조
+sql
+복사
+편집
+routine (
+  id,
+  title,
+  category,             -- 예: 감정일기, 운동, 외형관리 등 (ENUM 또는 자유입력 문자열)
+  start_date,
+  frequency,            -- 반복 주기 설정 (예: 매일, 주 3회 등)
+  performed_count,
+  performed_dates[],    -- 수행된 날짜 리스트
+  difficulty_history[], -- 난이도 조정 히스토리
+  history_log[],        -- 루틴 전체 내용 변경 히스토리
+  created_at,
+  updated_at
+)
+❌ tags 필드는 제거
+루틴은 정형적인 분류(category) 만으로 충분함
+
+감정일기, 외형관리 등으로 루틴 유형 명확하게 구분
+
+🛠️ difficulty_history 구조 예시
+json
+복사
+편집
+[
+  {
+    "date": "2025-06-01",
+    "change_type": "increase",           // increase / decrease / modify
+    "reason": "너무 쉬워서",
+    "before_description": "10분 달리기",
+    "after_description": "20분 달리기"
+  },
+  ...
+]
+change_type으로 명확히 표현
+
+reason은 선택 입력 가능
+
+✅ 수정된 내용: project의 자식 타입 명시
+🔧 project 노드는 유연한 실행 단위이므로 자식 타입은 아래와 같이 다양하게 허용됨:
+markdown
+복사
+편집
+project의 자식으로 허용되는 타입:
+- task               ✅ 일반적인 단발성 실행 항목
+- milestone_group    ✅ 마일스톤 묶음 (순서형 특성)
+- routine            ✅ 반복 습관 포함 가능 (예: 프로젝트 루틴화)
+- project            ✅ 하위 프로젝트 (서브 프로젝트 구조)
+📌 정책적 해석:
+project는 하나의 실행 단위 또는 모듈로 간주되며, 내부에 무엇을 포함하든 자유로움이 핵심임.
+
+단, 루틴이 자식에 포함될 경우 진행률 계산에서 제외됨 → 이 규칙도 함께 명시하면 됨.
+

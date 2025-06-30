@@ -1,0 +1,94 @@
+// todoManager DB 구조 (DBML for dbdiagram.io)
+
+Table goal {
+  id integer [primary key]
+  type varchar
+  title varchar
+  parent_id integer [ref: > goal.id]
+  description text
+  "order" integer
+  created_at timestamp
+  updated_at timestamp
+  deleted boolean
+  is_milestone boolean
+}
+
+Table project {
+  id integer [primary key]
+  type varchar
+  title varchar
+  parent_id integer [ref: > goal.id]
+  description text
+  "order" integer
+  start_date date
+  end_date date
+  created_at timestamp
+  updated_at timestamp
+  is_milestone boolean
+}
+
+Table milestone_group {
+  id integer [primary key]
+  type varchar
+  title varchar
+  parent_id integer [ref: > project.id]
+  "order" integer
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table task {
+  id integer [primary key]
+  type varchar
+  title varchar
+  parent_id integer [ref: > milestone_group.id]
+  due_date date
+  checked boolean
+  is_milestone boolean
+  milestone_date date
+  order_index integer
+}
+
+Table other_task {
+  id integer [primary key]
+  type varchar
+  title varchar
+  parent_id integer [ref: > project.id]
+  due_date date
+}
+
+Table routine {
+  id integer [primary key]
+  type varchar
+  title varchar
+  parent_id integer [ref: > project.id]
+  start_date date
+  frequency varchar
+  category varchar
+  performed_count integer
+  performed_dates text
+  failed_logs text
+  difficulty_history text
+  history_log text
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table aspiration {
+  id integer [primary key]
+  type varchar
+  title varchar
+  category varchar
+  importance integer
+  linked_goal_id integer [ref: > goal.id]
+  created_at timestamp
+}
+
+Table emotion_journal {
+  id integer [primary key]
+  date date
+  content text
+  created_at timestamp
+  mood_tag varchar
+  linked_routine_id integer [ref: > routine.id]
+} 

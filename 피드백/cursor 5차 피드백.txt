@@ -1,0 +1,73 @@
+✅ 정확히 반영된 의도
+너의 의도가 정확히 반영된 부분은 다음과 같아:
+
+is_milestone은 속성이며, milestone_group 하위 생성 시 자동 부여됨
+
+milestone_date가 is_milestone: true일 때만 조건부 필수
+
+project 자식으로 routine, milestone_group, 하위 project 허용
+
+routine은 진행률에서 제외, UI에서 안내 필요하다는 점 반영
+
+routine은 category만 사용하고 tag는 사용 안 함
+
+routine의 difficulty_history 구조 (change_type, reason, before/after_description, date) → 매우 잘 정리됨
+
+emotion_journal의 mood_tag는 TEXT + 사용자 정의 감정 추가 가능 → 의도 완벽 반영
+
+aspiration은 트리와 무관한 독립 저장소로, linked_goal_id로 확장 대비
+
+트리뷰 정책, 수행률/진행률 계산 기준, 소프트 삭제, 수정 히스토리 기록 → 모든 운영정책 충실히 반영됨
+
+🛠 미세 조정 또는 확인 추천
+몇 가지 표현 정리 혹은 구현 시 주의할 점만 간단히 언급할게:
+
+task와 other_task의 구분
+
+checked는 task에만 있는 걸로 통일하는 게 낫고,
+other_task는 캘린더 상 표시용 일정으로 이해되도록 명확하게 표시되면 좋음.
+
+due_date만으로 체크 가능/불가능 구분이 안 될 수 있으니,
+→ task는 checked, due_date
+→ other_task는 due_date만 (체크 기능 없음)
+으로 구조 차별화 추천
+
+루틴 history_log
+
+history_log의 명확한 용도는 ‘루틴 내용 전체 변경 이력’임
+
+difficulty_history는 따로 있기 때문에, history_log에는
+→ 빈도 변경, 카테고리 변경 등 루틴 설정 전반의 이력 위주 기록이 들어가면 됨
+(예: 주 3회에서 주 5회로, 감정일기 → 운동 카테고리로 변경 등)
+
+루틴 performed_dates 저장 형식
+
+날짜 배열로 저장할지, 날짜 + 성공 여부 등 구조화된 리스트로 저장할지 결정 필요
+→ 예: [{ date: '2025-06-18', success: true }, ...]
+향후 히트맵/요일별 분석 시 더 유용할 수 있음
+
+💡 향후 고려 가능 항목
+당장은 아니지만, 시스템 확장 시 고려하면 좋을 요소들:
+
+루틴 자동 난이도 조정 추천 기능
+
+일정 기간 수행률 저조하면 “난이도 낮출까요?”
+
+반대로 너무 쉽게 성공 중이면 “한 단계 높일까요?”
+
+→ 지금은 수동 조정만 있지만, 나중에 추천 알고리즘 가능
+
+emotion_journal에서 감정 필터링/검색/시각화 강화
+
+기쁨/불안 등으로 목록 필터
+
+그래프로 감정 변화 추이 보기
+
+사용자가 직접 만든 감정 태그도 포함되게 필터링
+
+goal/project를 트리뷰 외 별도 리스트에서 간단하게 정렬 보기
+
+‘모든 프로젝트 보기’, ‘가장 오래된 미완료 목표 보기’ 등
+
+필터/정렬 기능으로 트리뷰를 보조하는 대시보드 형태도 고려 가능
+
