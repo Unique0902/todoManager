@@ -12,6 +12,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { useAuthStore } from '../../store/auth';
+import styled from 'styled-components';
 
 const navigation = [
   { name: '홈', href: '/', icon: Home },
@@ -24,6 +25,90 @@ const navigation = [
   { name: '설정', href: '/settings', icon: Settings },
 ];
 
+const SidebarContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fff;
+  border-right: 1px solid #e5e7eb;
+`;
+const LogoBox = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 4rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid #e5e7eb;
+`;
+const LogoText = styled.h1`
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #2563eb;
+`;
+const Nav = styled.nav`
+  flex: 1;
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+`;
+const NavLink = styled(Link)<{ $active?: boolean }>`
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 0.75rem;
+  color: ${({ $active }) => ($active ? '#1d4ed8' : '#374151')};
+  background: ${({ $active }) => ($active ? '#dbeafe' : 'transparent')};
+  transition: background 0.2s, color 0.2s;
+  &:hover {
+    background: #f3f4f6;
+    color: #1d4ed8;
+  }
+`;
+const UserBox = styled.div`
+  padding: 1rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  justify-content: space-between;
+`;
+const UserInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+const UserName = styled.p`
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #111827;
+  margin-bottom: 0.25rem;
+`;
+const UserEmail = styled.p`
+  font-size: 0.8rem;
+  color: #6b7280;
+`;
+const LogoutBtn = styled.button`
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #374151;
+  border-radius: 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  &:hover {
+    background: #f3f4f6;
+    color: #1d4ed8;
+  }
+`;
+
 export const Sidebar: React.FC = () => {
   const location = useLocation();
   const { logout, user } = useAuthStore();
@@ -33,49 +118,36 @@ export const Sidebar: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white border-r border-gray-200">
+    <SidebarContainer>
       {/* 로고 영역 */}
-      <div className="flex items-center justify-center h-16 px-4 border-b border-gray-200">
-        <h1 className="text-xl font-bold text-primary-600">TodoManager</h1>
-      </div>
-
+      <LogoBox>
+        <LogoText>TodoManager</LogoText>
+      </LogoBox>
       {/* 네비게이션 메뉴 */}
-      <nav className="flex-1 px-4 py-6 space-y-2">
+      <Nav>
         {navigation.map((item) => {
           const isActive = location.pathname === item.href;
           return (
-            <Link
-              key={item.name}
-              to={item.href}
-              className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                isActive
-                  ? 'bg-primary-100 text-primary-700'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <item.icon className="w-5 h-5 mr-3" />
+            <NavLink key={item.name} to={item.href} $active={isActive}>
+              <item.icon style={{ width: 20, height: 20, marginRight: 12 }} />
               {item.name}
-            </Link>
+            </NavLink>
           );
         })}
-      </nav>
-
+      </Nav>
       {/* 사용자 정보 및 로그아웃 */}
-      <div className="p-4 border-t border-gray-200">
+      <UserBox>
         {user && (
-          <div className="mb-3">
-            <p className="text-sm font-medium text-gray-900">{user.name}</p>
-            <p className="text-xs text-gray-500">{user.email}</p>
-          </div>
+          <UserInfo>
+            <UserName>{user.name}</UserName>
+            <UserEmail>{user.email}</UserEmail>
+          </UserInfo>
         )}
-        <button
-          onClick={handleLogout}
-          className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
-        >
-          <LogOut className="w-5 h-5 mr-3" />
+        <LogoutBtn onClick={handleLogout}>
+          <LogOut style={{ width: 20, height: 20, marginRight: 12 }} />
           로그아웃
-        </button>
-      </div>
-    </div>
+        </LogoutBtn>
+      </UserBox>
+    </SidebarContainer>
   );
 }; 

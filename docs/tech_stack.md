@@ -2,7 +2,7 @@
 
 ## 1. 전체 아키텍처 개요
 - **백엔드**: FastAPI, SQLModel, PostgreSQL, Alembic, Docker
-- **프론트엔드**: React, TypeScript, Vite, Playwright
+- **프론트엔드**: React, TypeScript, Vite, styled-components
 - **테스트/품질**: Pytest, Playwright, pre-commit, lint
 - **배포/운영**: Docker Compose, GitHub Actions
 - **확장성**: AI(LangGraph, Gemini 등), 모바일/클라우드 연동 고려
@@ -21,7 +21,7 @@
 | 프론트엔드   | React             | 컴포넌트 기반 UI, 대규모 상태 관리, 생산성/유지보수 용이                          |
 |              | TypeScript        | 타입 안정성, 대규모 프로젝트에 필수                                               |
 |              | Vite              | 빠른 개발 서버, 빌드 속도 우수                                                    |
-|              | Playwright        | E2E 테스트, UI 자동화 테스트                                                      |
+|              | styled-components | CSS-in-JS, 컴포넌트 단위 스타일, 동적 스타일링, 테마 지원                        |
 | 품질/테스트  | Pytest            | Python 테스트 프레임워크                                                          |
 |              | pre-commit        | 커밋 전 코드 품질 자동 체크                                                       |
 |              | ESLint/Prettier   | JS/TS 코드 스타일 및 린트                                                         |
@@ -45,7 +45,7 @@
 - **React**: 트리 구조, 대시보드, 분석 등 복잡한 UI 구현에 적합
 - **TypeScript**: 런타임 오류 감소, 유지보수성 향상
 - **Vite**: 빠른 HMR, 빌드 속도, 최신 프론트엔드 개발 환경
-- **Playwright**: E2E 테스트 자동화, UI 신뢰성 확보
+- **styled-components**: CSS-in-JS, 컴포넌트 단위 스타일, 동적 스타일링, 테마 지원
 
 ### 품질/테스트
 - **Pytest**: 백엔드 단위/통합 테스트

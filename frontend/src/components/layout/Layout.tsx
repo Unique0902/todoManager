@@ -18,9 +18,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* 헤더 */}
         <header className="bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">
-              TodoManager
-            </h2>
             <div className="flex items-center space-x-4">
               {/* 알림, 프로필 등 추가 가능 */}
             </div>

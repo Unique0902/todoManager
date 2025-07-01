@@ -460,7 +460,7 @@ export const useTree = () => {
 - **TanStack Query 5.x** - 서버 상태 관리 (React Query에서 이름 변경)
 
 #### UI/스타일링
-- **Tailwind CSS 3.x** - 유틸리티 기반 CSS 프레임워크
+- **styled-components** - CSS-in-JS 기반 스타일링
 - **Radix UI** - 접근성 고려한 Headless UI 컴포넌트 (Headless UI 대안)
 - **Lucide React** - 현대적인 아이콘 라이브러리 (React Icons 대안)
 - **Framer Motion** - 애니메이션 라이브러리 (트리뷰 인터랙션용)
