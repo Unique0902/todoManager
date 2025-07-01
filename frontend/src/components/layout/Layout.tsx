@@ -12,7 +12,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <div className="w-64 flex-shrink-0">
         <Sidebar />
       </div>
-
       {/* 메인 콘텐츠 */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* 헤더 */}
@@ -23,7 +22,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
           </div>
         </header>
-
         {/* 페이지 콘텐츠 */}
         <main className="flex-1 overflow-auto p-6">
           {children}
