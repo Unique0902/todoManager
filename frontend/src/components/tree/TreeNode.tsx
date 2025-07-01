@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import type { TreeNodeData } from './TreeView';
 import { Pin, PinOff } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface TreeNodeProps {
   node: TreeNodeData;
@@ -176,14 +177,13 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
   draggingId, setDraggingId, dragOverId, setDragOverId, onMoveNode, focusedId, setFocusedId
 }) => {
   const selected = node.id === selectedId;
-  const [showAdd, setShowAdd] = useState(false);
-  const [addTitle, setAddTitle] = useState('');
-  const [addType, setAddType] = useState('task');
+  const [showAddType, setShowAddType] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editTitle, setEditTitle] = useState(node.title);
   const [open, setOpen] = useState(true);
   const isPinned = pinnedIds?.includes(node.id);
+  const navigate = useNavigate();
 
   // 드래그&드롭 상태
   const isDragging = draggingId === node.id;
@@ -196,14 +196,13 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
     if (expanded !== undefined) setOpen(expanded);
   }, [expanded]);
 
-  const handleAdd = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (addTitle.trim() && onAddChild) {
-      onAddChild(node.id, addTitle, addType);
-      setAddTitle('');
-      setShowAdd(false);
-    }
-  };
+  useEffect(() => {
+    if (!showAddType) return;
+    const handleClick = () => setShowAddType(false);
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
+  }, [showAddType]);
+
   const handleEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editTitle.trim() && onEdit) {
@@ -335,8 +334,8 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
             </button>
           )}
         </NodeContent>
-        <NodeActions className="node-actions">
-          <ActionBtn onClick={e => { e.stopPropagation(); setShowAdd(v => !v); setShowMenu(false); }}>+</ActionBtn>
+        <NodeActions className="node-actions" onClick={e => e.stopPropagation()}>
+          <ActionBtn onClick={e => { e.stopPropagation(); setShowAddType(v => !v); setShowMenu(false); }}>+</ActionBtn>
           <ActionBtn onClick={e => { e.stopPropagation(); setShowMenu(v => !v); }}>…</ActionBtn>
           {showMenu && (
             <Menu onClick={e => e.stopPropagation()}>
@@ -345,19 +344,27 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
             </Menu>
           )}
         </NodeActions>
+        {showAddType && (
+          <div style={{
+            position: 'absolute',
+            zIndex: 9999,
+            background: '#fff',
+            border: '1px solid #e5e7eb',
+            borderRadius: 8,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            padding: 8,
+            top: 32,
+            left: 0,
+            minWidth: 140,
+            whiteSpace: 'nowrap'
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight: 500, marginBottom: 6, fontSize: '0.98rem' }}>노드 타입 선택</div>
+            <button style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 12px', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => { setShowAddType(false); navigate(`/task/new?parentId=${node.id}`); }}>할일 추가</button>
+            <button style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 12px', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => { setShowAddType(false); navigate(`/routine/new?parentId=${node.id}`); }}>루틴 추가</button>
+            <button style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 12px', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => { setShowAddType(false); navigate(`/project/new?parentId=${node.id}`); }}>프로젝트 추가</button>
+          </div>
+        )}
       </NodeBox>
-      {showAdd && (
-        <InlineForm onSubmit={handleAdd}>
-          <InlineInput value={addTitle} onChange={e => setAddTitle(e.target.value)} placeholder="자식 노드 제목" autoFocus />
-          <select value={addType} onChange={e => setAddType(e.target.value)}>
-            <option value="task">할일</option>
-            <option value="project">프로젝트</option>
-            <option value="routine">루틴</option>
-          </select>
-          <ActionBtn type="submit">추가</ActionBtn>
-          <ActionBtn type="button" onClick={() => setShowAdd(false)}>취소</ActionBtn>
-        </InlineForm>
-      )}
       {open && node.children && node.children.length > 0 && (
         <ChildrenWrapper>
           {node.children.map((child) => (
