@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import type { TreeNodeData } from './TreeView';
 import { Pin, PinOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 
 interface TreeNodeProps {
   node: TreeNodeData;
@@ -37,18 +38,11 @@ const NodeBox = styled.div<{ selected: boolean }>`
   background: ${({ selected }) => (selected ? '#dbeafe' : 'transparent')};
   border-radius: 0.5rem;
   cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s, opacity 0.2s, transform 0.15s;
   overflow: visible;
   min-width: 0;
   width: 100%;
   &:hover {
-    box-shadow: 0 2px 8px rgba(37,99,235,0.08);
-    transform: scale(1.015);
     background: #f3f4f6;
-  }
-  &:active {
-    transform: scale(0.98);
-    box-shadow: 0 1px 4px rgba(37,99,235,0.10);
   }
   &:hover .node-actions {
     opacity: 1;
@@ -69,8 +63,7 @@ const NodeActions = styled.div`
   margin-left: 8px;
   min-width: 0;
   flex-shrink: 0;
-  opacity: 0;
-  transition: opacity 0.2s;
+  opacity: 1;
   z-index: 10;
   background: #fff;
   padding: 0 4px;
@@ -154,11 +147,6 @@ const getIcon = (type: string) => {
   }
 };
 
-const ChildrenWrapper = styled.div`
-  transition: max-height 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s;
-  overflow: hidden;
-`;
-
 const NodeContent = styled.div<{ $depth: number }>`
   display: flex;
   align-items: center;
@@ -169,6 +157,20 @@ const NodeContent = styled.div<{ $depth: number }>`
   padding-left: ${({ $depth }) => $depth * 24}px;
   @media (max-width: 600px) {
     padding-left: ${({ $depth }) => $depth * 12}px;
+  }
+`;
+
+const AddTypeMenuItem = styled.button`
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  &:hover {
+    background: #f3f4f6;
   }
 `;
 
@@ -184,13 +186,12 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
   const [open, setOpen] = useState(true);
   const isPinned = pinnedIds?.includes(node.id);
   const navigate = useNavigate();
-
-  // 드래그&드롭 상태
-  const isDragging = draggingId === node.id;
-  const isDragOver = dragOverId === node.id;
-
-  // 포커스 상태
-  const isFocused = focusedId === node.id;
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
+  const addBtnRef = useRef<HTMLButtonElement>(null);
+  const [menuPos, setMenuPos] = useState<{top: number, left: number} | null>(null);
+  const [addPos, setAddPos] = useState<{top: number, left: number} | null>(null);
+  const addPopoverRef = useRef<HTMLDivElement>(null);
+  const menuPopoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (expanded !== undefined) setOpen(expanded);
@@ -202,6 +203,54 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
     window.addEventListener('click', handleClick);
     return () => window.removeEventListener('click', handleClick);
   }, [showAddType]);
+
+  // 팝오버 위치 안전하게 계산 (requestAnimationFrame 활용)
+  useEffect(() => {
+    if (showMenu) {
+      const updateMenuPos = () => {
+        if (menuBtnRef.current) {
+          const rect = menuBtnRef.current.getBoundingClientRect();
+          setMenuPos({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX });
+        } else {
+          requestAnimationFrame(updateMenuPos);
+        }
+      };
+      updateMenuPos();
+    } else {
+      setMenuPos(null);
+    }
+  }, [showMenu]);
+
+  useEffect(() => {
+    if (showAddType) {
+      const updateAddPos = () => {
+        if (addBtnRef.current) {
+          const rect = addBtnRef.current.getBoundingClientRect();
+          setAddPos({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX });
+        } else {
+          requestAnimationFrame(updateAddPos);
+        }
+      };
+      updateAddPos();
+    } else {
+      setAddPos(null);
+    }
+  }, [showAddType]);
+
+  // 팝오버 바깥 클릭 시 닫기 (내부 클릭은 막지 않음)
+  useEffect(() => {
+    if (!showMenu && !showAddType) return;
+    const handleClick = (e: MouseEvent) => {
+      // 메뉴 팝오버 내부 클릭은 무시
+      if (showMenu && menuPopoverRef.current && menuPopoverRef.current.contains(e.target as Node)) return;
+      // 추가 팝오버 내부 클릭은 무시
+      if (showAddType && addPopoverRef.current && addPopoverRef.current.contains(e.target as Node)) return;
+      setShowMenu(false);
+      setShowAddType(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showMenu, showAddType]);
 
   const handleEdit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -236,12 +285,6 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
         onClick={() => {
           onSelect && onSelect(node.id);
           onNodeClick && onNodeClick(node);
-        }}
-        style={{
-          ...(hasSearch && match ? { background: '#fef9c3' } : {}),
-          ...(isDragging ? { opacity: 0.5, border: '2px dashed #2563eb' } : {}),
-          ...(isDragOver ? { background: '#dbeafe', border: '2px solid #2563eb' } : {}),
-          ...(isFocused ? { outline: '2px solid #2563eb', zIndex: 2 } : {})
         }}
         tabIndex={0}
         role="treeitem"
@@ -334,39 +377,106 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
             </button>
           )}
         </NodeContent>
-        <NodeActions className="node-actions" onClick={e => e.stopPropagation()}>
-          <ActionBtn onClick={e => { e.stopPropagation(); setShowAddType(v => !v); setShowMenu(false); }}>+</ActionBtn>
-          <ActionBtn onClick={e => { e.stopPropagation(); setShowMenu(v => !v); }}>…</ActionBtn>
-          {showMenu && (
-            <Menu onClick={e => e.stopPropagation()}>
-              <MenuItem onClick={() => { setEditMode(true); setShowMenu(false); }}>수정</MenuItem>
+        <NodeActions
+          className="node-actions"
+          onClick={e => e.stopPropagation()}
+        >
+          {/* task, other_task, routine 타입은 하위 노드 추가 불가 → 추가 버튼 숨김 */}
+          {!(node.type === 'task' || node.type === 'other_task' || node.type === 'routine') && (
+            <ActionBtn ref={addBtnRef} onClick={e => {
+              e.stopPropagation();
+              setShowAddType(v => {
+                if (!v) {
+                  // 팝오버 위치 재계산 보장 (렌더링 이후)
+                  setTimeout(() => {
+                    if (addBtnRef.current) {
+                      const rect = addBtnRef.current.getBoundingClientRect();
+                      setAddPos({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX });
+                    }
+                  }, 0);
+                }
+                return !v;
+              });
+              setShowMenu(false);
+            }}>+</ActionBtn>
+          )}
+          <ActionBtn ref={menuBtnRef} onClick={e => { e.stopPropagation(); setShowMenu(v => !v); }}>…</ActionBtn>
+          {showMenu && menuPos && createPortal(
+            <Menu
+              ref={menuPopoverRef}
+              style={{
+                position: 'absolute',
+                top: menuPos.top,
+                left: menuPos.left,
+                right: 'auto',
+                zIndex: 9999
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <MenuItem onClick={() => {
+                setShowMenu(false);
+                if (node.type === 'task') navigate(`/task/edit/${node.id}`);
+                else if (node.type === 'routine') navigate(`/routine/edit/${node.id}`);
+                else if (node.type === 'project') navigate(`/project/edit/${node.id}`);
+                else if (node.type === 'goal') navigate(`/goal/edit/${node.id}`);
+                else if (node.type === 'milestone_group') navigate(`/milestone_group/edit/${node.id}`);
+                else setEditMode(true);
+              }}>수정</MenuItem>
               <MenuItem onClick={() => { onDelete && onDelete(node.id); setShowMenu(false); }}>삭제</MenuItem>
-            </Menu>
+            </Menu>,
+            document.body
           )}
         </NodeActions>
-        {showAddType && (
-          <div style={{
-            position: 'absolute',
-            zIndex: 9999,
-            background: '#fff',
-            border: '1px solid #e5e7eb',
-            borderRadius: 8,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-            padding: 8,
-            top: 32,
-            left: 0,
-            minWidth: 140,
-            whiteSpace: 'nowrap'
-          }} onClick={e => e.stopPropagation()}>
+        {showAddType && addPos && createPortal(
+          <div
+            ref={addPopoverRef}
+            style={{
+              position: 'absolute',
+              zIndex: 99999,
+              pointerEvents: 'auto',
+              background: '#fff',
+              border: '1px solid #e5e7eb',
+              borderRadius: 8,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+              padding: 8,
+              top: addPos.top,
+              left: addPos.left,
+              minWidth: 140,
+              whiteSpace: 'nowrap'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
             <div style={{ fontWeight: 500, marginBottom: 6, fontSize: '0.98rem' }}>노드 타입 선택</div>
-            <button style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 12px', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => { setShowAddType(false); navigate(`/task/new?parentId=${node.id}`); }}>할일 추가</button>
-            <button style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 12px', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => { setShowAddType(false); navigate(`/routine/new?parentId=${node.id}`); }}>루틴 추가</button>
-            <button style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 12px', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => { setShowAddType(false); navigate(`/project/new?parentId=${node.id}`); }}>프로젝트 추가</button>
-          </div>
+            <AddTypeMenuItem
+              tabIndex={0}
+              style={{ pointerEvents: 'auto', zIndex: 99999 }}
+              onClick={() => {
+                console.log('할일 추가 클릭', `/task/new?parentId=${node.id}`);
+                navigate(`/task/new?parentId=${node.id}`);
+              }}
+            >할일 추가</AddTypeMenuItem>
+            <AddTypeMenuItem
+              tabIndex={0}
+              style={{ pointerEvents: 'auto', zIndex: 99999 }}
+              onClick={() => {
+                console.log('루틴 추가 클릭', `/routine/new?parentId=${node.id}`);
+                navigate(`/routine/new?parentId=${node.id}`);
+              }}
+            >루틴 추가</AddTypeMenuItem>
+            <AddTypeMenuItem
+              tabIndex={0}
+              style={{ pointerEvents: 'auto', zIndex: 99999 }}
+              onClick={() => {
+                console.log('프로젝트 추가 클릭', `/project/new?parentId=${node.id}`);
+                navigate(`/project/new?parentId=${node.id}`);
+              }}
+            >프로젝트 추가</AddTypeMenuItem>
+          </div>,
+          document.body
         )}
       </NodeBox>
       {open && node.children && node.children.length > 0 && (
-        <ChildrenWrapper>
+        <div>
           {node.children.map((child) => (
             <TreeNode
               key={child.id}
@@ -393,7 +503,7 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
               setFocusedId={setFocusedId}
             />
           ))}
-        </ChildrenWrapper>
+        </div>
       )}
     </div>
   );

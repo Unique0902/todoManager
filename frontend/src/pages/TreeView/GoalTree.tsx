@@ -148,10 +148,17 @@ const GoalTree: React.FC = () => {
       {pinnedNodes.length > 0 && (
         <PinnedGrid>
           {pinnedNodes.map(n => (
-            <PinnedCard key={n.id}>
+            <PinnedCard
+              key={n.id}
+              onClick={() => navigate(`/tree/${goalId}/node/${n.id}`)}
+              style={{ cursor: 'pointer' }}
+            >
               <Pin style={{ color: '#f59e0b', marginRight: 4 }} />
               {n.title}
-              <button style={{ background: 'none', border: 'none', marginLeft: 8, cursor: 'pointer' }} onClick={() => handlePinToggle(n.id)}>
+              <button
+                style={{ background: 'none', border: 'none', marginLeft: 8, cursor: 'pointer' }}
+                onClick={e => { e.stopPropagation(); handlePinToggle(n.id); }}
+              >
                 <PinOff size={18} />
               </button>
             </PinnedCard>

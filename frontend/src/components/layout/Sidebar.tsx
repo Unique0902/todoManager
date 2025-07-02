@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Home,
@@ -174,7 +174,13 @@ const LogoutBtn = styled.button`
 export const Sidebar: React.FC = () => {
   const location = useLocation();
   const { logout, user } = useAuthStore();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebar_collapsed');
+    return saved === 'true';
+  });
+  useEffect(() => {
+    localStorage.setItem('sidebar_collapsed', collapsed ? 'true' : 'false');
+  }, [collapsed]);
   const handleLogout = () => {
     logout();
   };

@@ -12,6 +12,16 @@ import NodeCreate from './pages/TreeView/NodeCreate';
 import NodeDelete from './pages/TreeView/NodeDelete';
 import { TreeProvider } from './components/tree/TreeContext';
 import GoalTree from './pages/TreeView/GoalTree';
+import TaskEditPage from './pages/TaskEditPage';
+import RoutineEditPage from './pages/RoutineEditPage';
+import ProjectEditPage from './pages/ProjectEditPage';
+import GoalEditPage from './pages/GoalEditPage';
+import MilestoneGroupEditPage from './pages/MilestoneGroupEditPage';
+import TaskCreatePage from './pages/TaskCreatePage';
+import RoutineCreatePage from './pages/RoutineCreatePage';
+import ProjectCreatePage from './pages/ProjectCreatePage';
+import GoalCreatePage from './pages/GoalCreatePage';
+import MilestoneGroupCreatePage from './pages/MilestoneGroupCreatePage';
 
 // 글로벌 테마 정의
 const theme = {
@@ -186,6 +196,16 @@ function App() {
                   </Layout>
                 </ProtectedRoute>
               } />
+              <Route path="/task/edit/:id" element={<Layout><TaskEditPage /></Layout>} />
+              <Route path="/routine/edit/:id" element={<Layout><RoutineEditPage /></Layout>} />
+              <Route path="/project/edit/:id" element={<Layout><ProjectEditPage /></Layout>} />
+              <Route path="/goal/edit/:id" element={<Layout><GoalEditPage /></Layout>} />
+              <Route path="/milestone_group/edit/:id" element={<Layout><MilestoneGroupEditPage /></Layout>} />
+              <Route path="/task/new" element={<Layout><TaskCreatePage /></Layout>} />
+              <Route path="/routine/new" element={<Layout><RoutineCreatePage /></Layout>} />
+              <Route path="/project/new" element={<Layout><ProjectCreatePage /></Layout>} />
+              <Route path="/goal/new" element={<Layout><GoalCreatePage /></Layout>} />
+              <Route path="/milestone_group/new" element={<Layout><MilestoneGroupCreatePage /></Layout>} />
               {/* 임시로 대시보드만 구현 */}
               <Route path="*" element={
                 <ProtectedRoute>

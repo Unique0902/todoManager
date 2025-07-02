@@ -80,7 +80,16 @@ const NodeDetail: React.FC = () => {
       <Type>타입: {node.type}</Type>
       <Desc>ID: {node.id}</Desc>
       <ActionBar>
-        <ActionBtn onClick={() => navigate(`/tree/${goalId}/node/${nodeId}/edit`)}>수정</ActionBtn>
+        <ActionBtn
+          onClick={() => {
+            if (node.type === 'task') navigate(`/task/edit/${node.id}`);
+            else if (node.type === 'routine') navigate(`/routine/edit/${node.id}`);
+            else if (node.type === 'project') navigate(`/project/edit/${node.id}`);
+            else if (node.type === 'goal') navigate(`/goal/edit/${node.id}`);
+            else if (node.type === 'milestone_group') navigate(`/milestone_group/edit/${node.id}`);
+            else navigate(`/tree/${goalId}/node/${nodeId}/edit`);
+          }}
+        >수정</ActionBtn>
         <ActionBtn onClick={() => navigate(`/tree/${goalId}/node/${nodeId}/delete`)}>삭제</ActionBtn>
         <ActionBtn onClick={() => navigate(`/tree/${goalId}/node/${nodeId}/create`)}>자식 노드 생성</ActionBtn>
       </ActionBar>
