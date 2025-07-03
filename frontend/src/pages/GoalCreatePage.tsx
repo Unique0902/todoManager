@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const Container = styled.div`
   max-width: 480px;
@@ -38,18 +38,17 @@ const Button = styled.button`
 export default function GoalCreatePage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [order, setOrder] = useState('');
-  const [isMilestone, setIsMilestone] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const parentId = searchParams.get('parentId');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await axios.post('/api/goals', {
+    await axios.post('/api/v1/goals', {
       type: 'goal',
       title,
       description,
-      order: order ? Number(order) : undefined,
-      is_milestone: isMilestone,
+      parent_id: parentId || undefined,
     });
     navigate(-1);
   };
@@ -62,11 +61,6 @@ export default function GoalCreatePage() {
         <Input value={title} onChange={e => setTitle(e.target.value)} required />
         <Label>설명</Label>
         <Input value={description} onChange={e => setDescription(e.target.value)} />
-        <Label>정렬 순서</Label>
-        <Input type="number" value={order} onChange={e => setOrder(e.target.value)} />
-        <Label>
-          <input type="checkbox" checked={isMilestone} onChange={e => setIsMilestone(e.target.checked)} /> 마일스톤 특성
-        </Label>
         <Button type="submit">저장</Button>
       </form>
     </Container>

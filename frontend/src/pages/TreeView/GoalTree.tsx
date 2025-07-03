@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { TreeNode } from '../../components/tree/TreeNode';
-import { useTreeContext } from '../../components/tree/TreeContext';
-import type { TreeNodeData } from '../../components/tree/TreeContext';
 import styled from 'styled-components';
 import { Pin, PinOff } from 'lucide-react';
+import axios from 'axios';
+import type { TreeNodeData } from '../../components/tree/TreeTypes';
 
 const BackBtn = styled.button`
   margin: 32px 0 24px 0;
@@ -100,7 +100,9 @@ const TreeArea = styled.div`
 const GoalTree: React.FC = () => {
   const { goalId } = useParams<{ goalId: string }>();
   const navigate = useNavigate();
-  const { tree, dispatch } = useTreeContext();
+  const [treeData, setTreeData] = useState<TreeNodeData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [hideRoutines, setHideRoutines] = useState(false);
   const [hideTasks, setHideTasks] = useState(false);
   const [search, setSearch] = useState('');
@@ -109,24 +111,43 @@ const GoalTree: React.FC = () => {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
-  const goal = tree.find(g => g.id === goalId);
-  if (!goal) return <div style={{ padding: 40, textAlign: 'center' }}>존재하지 않는 목표입니다.</div>;
+
+  useEffect(() => {
+    if (!goalId) return;
+    setLoading(true);
+    setError(null);
+    axios.get(`/api/v1/goals/${goalId}/tree`)
+      .then(res => {
+        setTreeData(res.data);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError('트리 데이터를 불러오지 못했습니다.' + (err?.message ? ` (${err.message})` : ''));
+        setTreeData(null);
+        setLoading(false);
+      });
+  }, [goalId]);
+
+  if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>로딩 중...</div>;
+  if (error) return <div style={{ padding: 40, textAlign: 'center', color: 'red' }}>{error}</div>;
+  if (!treeData) return <div style={{ padding: 40, textAlign: 'center' }}>존재하지 않는 목표입니다.</div>;
+
   const handleNodeClick = (node: TreeNodeData) => {
     navigate(`/tree/${goalId}/node/${node.id}`);
   };
   const handlePinToggle = (id: string) => {
     setPinnedIds(prev => prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]);
   };
-  const pinnedNodes = [goal, ...goal.children].filter(n => pinnedIds.includes(n.id));
+  const pinnedNodes = [treeData, ...treeData.children].filter(n => pinnedIds.includes(n.id));
   const handleMoveNode = (draggingId: string, dragOverId: string) => {
     if (draggingId && dragOverId && draggingId !== dragOverId) {
-      dispatch({ type: 'MOVE_NODE', draggingId, dragOverId });
+      // dispatch({ type: 'MOVE_NODE', draggingId, dragOverId });
     }
   };
   return (
     <TreeArea>
       <BackBtn onClick={() => navigate('/tree')}>← 목표 리스트로</BackBtn>
-      <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: 24 }}>{goal.title} 트리</h2>
+      <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: 24 }}>{treeData.title} 트리</h2>
       <ControlBar>
         <FilterLabel>
           <input type="checkbox" checked={hideRoutines} onChange={e => setHideRoutines(e.target.checked)} />
@@ -167,7 +188,7 @@ const GoalTree: React.FC = () => {
       )}
       <div style={{ marginTop: 24 }}>
         <TreeNode
-          node={goal}
+          node={treeData}
           depth={0}
           onNodeClick={handleNodeClick}
           hideRoutines={hideRoutines}

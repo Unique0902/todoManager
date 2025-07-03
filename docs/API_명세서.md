@@ -411,6 +411,48 @@ DELETE /api/v1/goals/{goal_id}
 }
 ```
 
+#### 7. 최상위 목표 조회
+```http
+GET /api/v1/goals/root
+```
+
+**설명**: parent_id가 없는 최상위 목표(최종 목표)만 리스트로 반환합니다.
+
+**응답 예시**:
+```json
+[
+  {
+    "id": 1,
+    "title": "건강한 삶",
+    "description": "운동, 식습관 등 포함",
+    "parent_id": null,
+    ...
+  },
+  {
+    "id": 2,
+    "title": "개발자 되기",
+    "description": "포트폴리오, 공부 등 포함",
+    "parent_id": null,
+    ...
+  }
+]
+```
+
+#### 8. 최종목표 전체 삭제 (hard delete)
+```http
+DELETE /api/v1/goals/{goal_id}/tree
+```
+
+**설명**: 해당 goal_id의 최종목표와 모든 하위 노드(프로젝트, 태스크, 루틴, 마일스톤 그룹, 기타할일 등)를 재귀적으로 **DB에서 완전히 삭제(hard delete)** 합니다.
+**주의**: 하위에 연결된 모든 데이터가 함께 완전히 삭제되므로, 복구가 불가능합니다. 신중히 사용해야 합니다.
+
+**요청 예시**:
+```
+DELETE /api/v1/goals/1/tree
+```
+
+**응답**: 204 No Content (성공 시)
+
 ### Projects API
 
 #### 1. 프로젝트 목록 조회

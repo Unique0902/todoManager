@@ -39,25 +39,22 @@ export default function GoalEditPage() {
   const { id } = useParams();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [order, setOrder] = useState('');
   const [isMilestone, setIsMilestone] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get(`/api/goals/${id}`).then(res => {
+    axios.get(`/api/v1/goals/${id}`).then(res => {
       setTitle(res.data.title || '');
       setDescription(res.data.description || '');
-      setOrder(res.data.order || '');
       setIsMilestone(res.data.is_milestone || false);
     });
   }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await axios.patch(`/api/goals/${id}`, {
+    await axios.put(`/api/v1/goals/${id}`, {
       title,
       description,
-      order: order ? Number(order) : undefined,
       is_milestone: isMilestone,
     });
     navigate(-1);
@@ -71,8 +68,6 @@ export default function GoalEditPage() {
         <Input value={title} onChange={e => setTitle(e.target.value)} required />
         <Label>설명</Label>
         <Input value={description} onChange={e => setDescription(e.target.value)} />
-        <Label>정렬 순서</Label>
-        <Input type="number" value={order} onChange={e => setOrder(e.target.value)} />
         <Label>
           <input type="checkbox" checked={isMilestone} onChange={e => setIsMilestone(e.target.checked)} /> 마일스톤 특성
         </Label>

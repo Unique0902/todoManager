@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const Container = styled.div`
   max-width: 480px;
@@ -39,24 +39,20 @@ export default function TaskCreatePage() {
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [checked, setChecked] = useState(false);
-  const [isMilestone, setIsMilestone] = useState(false);
-  const [milestoneDate, setMilestoneDate] = useState('');
-  const [orderIndex, setOrderIndex] = useState('');
   const navigate = useNavigate();
-
-  // 마일스톤 관련 필드는 실제로는 부모가 milestone_group일 때만 노출해야 함(여기선 예시로 항상 노출)
-  const showMilestoneFields = isMilestone;
+  const [searchParams] = useSearchParams();
+  const parentId = searchParams.get('parentId');
+  const parentType = searchParams.get('parentType');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await axios.post('/api/tasks', {
+    await axios.post('/api/v1/tasks', {
       type: 'task',
       title,
       due_date: dueDate || undefined,
       checked,
-      is_milestone: isMilestone,
-      milestone_date: showMilestoneFields ? milestoneDate : undefined,
-      order_index: showMilestoneFields && orderIndex ? Number(orderIndex) : undefined,
+      parent_id: parentId ? Number(parentId) : undefined,
+      parent_type: parentType || undefined,
     });
     navigate(-1);
   };
@@ -72,17 +68,6 @@ export default function TaskCreatePage() {
         <Label>
           <input type="checkbox" checked={checked} onChange={e => setChecked(e.target.checked)} /> 완료 여부
         </Label>
-        <Label>
-          <input type="checkbox" checked={isMilestone} onChange={e => setIsMilestone(e.target.checked)} /> 마일스톤 특성
-        </Label>
-        {showMilestoneFields && (
-          <>
-            <Label>마일스톤 일자</Label>
-            <Input type="date" value={milestoneDate} onChange={e => setMilestoneDate(e.target.value)} />
-            <Label>마일스톤 내 순서</Label>
-            <Input type="number" value={orderIndex} onChange={e => setOrderIndex(e.target.value)} />
-          </>
-        )}
         <Button type="submit">저장</Button>
       </form>
     </Container>

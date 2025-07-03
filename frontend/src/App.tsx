@@ -10,7 +10,7 @@ import NodeDetail from './pages/TreeView/NodeDetail';
 import NodeEdit from './pages/TreeView/NodeEdit';
 import NodeCreate from './pages/TreeView/NodeCreate';
 import NodeDelete from './pages/TreeView/NodeDelete';
-import { TreeProvider } from './components/tree/TreeContext';
+import { TreeProvider } from './components/tree/TreeContext.tsx';
 import GoalTree from './pages/TreeView/GoalTree';
 import TaskEditPage from './pages/TaskEditPage';
 import RoutineEditPage from './pages/RoutineEditPage';

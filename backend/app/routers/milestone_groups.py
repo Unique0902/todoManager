@@ -10,17 +10,23 @@ router = APIRouter()
 # MilestoneGroup 생성
 @router.post("/", response_model=MilestoneGroup, status_code=status.HTTP_201_CREATED)
 def create_milestone_group(group: MilestoneGroup, session: Session = Depends(get_session)):
-    # parent_type 유효성 검사 (항상)
-    if group.parent_type != 'project':
-        raise HTTPException(status_code=400, detail="MilestoneGroup의 parent_type은 'project'만 허용됩니다.")
+    # parent_type 유효성 검사 (goal, project 모두 허용)
+    if group.parent_type not in ['goal', 'project']:
+        raise HTTPException(status_code=400, detail="MilestoneGroup의 parent_type은 'goal' 또는 'project'만 허용됩니다.")
     # parent_id 유효성 검사
     if group.parent_id is not None:
         if group.parent_id == group.id:
             raise HTTPException(status_code=400, detail="자기 자신을 부모로 지정할 수 없습니다.")
-        from ..models.project import Project
-        parent = session.get(Project, group.parent_id)
-        if not parent or parent.deleted:
-            raise HTTPException(status_code=400, detail="parent_id에 해당하는 Project가 존재하지 않습니다.")
+        if group.parent_type == 'project':
+            from ..models.project import Project
+            parent = session.get(Project, group.parent_id)
+            if not parent or parent.deleted:
+                raise HTTPException(status_code=400, detail="parent_id에 해당하는 Project가 존재하지 않습니다.")
+        elif group.parent_type == 'goal':
+            from ..models.goal import Goal
+            parent = session.get(Goal, group.parent_id)
+            if not parent or parent.deleted:
+                raise HTTPException(status_code=400, detail="parent_id에 해당하는 Goal이 존재하지 않습니다.")
     group.created_at = datetime.utcnow()
     group.updated_at = datetime.utcnow()
     session.add(group)
@@ -52,12 +58,18 @@ def update_milestone_group(group_id: int, group_update: MilestoneGroup, session:
     if "parent_id" in update_data and update_data["parent_id"] is not None:
         if update_data["parent_id"] == group_id:
             raise HTTPException(status_code=400, detail="자기 자신을 부모로 지정할 수 없습니다.")
-        if update_data.get("parent_type") != 'project':
-            raise HTTPException(status_code=400, detail="MilestoneGroup의 parent_type은 'project'만 허용됩니다.")
-        from ..models.project import Project
-        parent = session.get(Project, update_data["parent_id"])
-        if not parent or parent.deleted:
-            raise HTTPException(status_code=400, detail="parent_id에 해당하는 Project가 존재하지 않습니다.")
+        if update_data.get("parent_type") not in ['goal', 'project']:
+            raise HTTPException(status_code=400, detail="MilestoneGroup의 parent_type은 'goal' 또는 'project'만 허용됩니다.")
+        if update_data.get("parent_type") == 'project':
+            from ..models.project import Project
+            parent = session.get(Project, update_data["parent_id"])
+            if not parent or parent.deleted:
+                raise HTTPException(status_code=400, detail="parent_id에 해당하는 Project가 존재하지 않습니다.")
+        elif update_data.get("parent_type") == 'goal':
+            from ..models.goal import Goal
+            parent = session.get(Goal, update_data["parent_id"])
+            if not parent or parent.deleted:
+                raise HTTPException(status_code=400, detail="parent_id에 해당하는 Goal이 존재하지 않습니다.")
     for key, value in update_data.items():
         setattr(db_group, key, value)
     db_group.updated_at = datetime.utcnow()

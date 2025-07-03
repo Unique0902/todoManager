@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const Container = styled.div`
   max-width: 480px;
@@ -37,15 +37,18 @@ const Button = styled.button`
 
 export default function MilestoneGroupCreatePage() {
   const [title, setTitle] = useState('');
-  const [order, setOrder] = useState('');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const parentId = searchParams.get('parentId');
+  const parentType = searchParams.get('parentType');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await axios.post('/api/milestone-groups', {
+    await axios.post('/api/v1/milestone-groups', {
       type: 'milestone_group',
       title,
-      order: order ? Number(order) : undefined,
+      parent_id: parentId ? Number(parentId) : undefined,
+      parent_type: parentType || undefined,
     });
     navigate(-1);
   };
@@ -56,8 +59,6 @@ export default function MilestoneGroupCreatePage() {
       <form onSubmit={handleSubmit}>
         <Label>마일스톤 그룹명 *</Label>
         <Input value={title} onChange={e => setTitle(e.target.value)} required />
-        <Label>정렬 순서</Label>
-        <Input type="number" value={order} onChange={e => setOrder(e.target.value)} />
         <Button type="submit">저장</Button>
       </form>
     </Container>

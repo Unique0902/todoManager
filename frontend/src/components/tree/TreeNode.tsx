@@ -174,6 +174,17 @@ const AddTypeMenuItem = styled.button`
   }
 `;
 
+// 부모 타입별 허용 자식 타입 정의
+const getAllowedChildTypes = (parentType: string) => {
+  if (parentType === 'goal' || parentType === 'project') {
+    return ['goal', 'project', 'milestone_group', 'task', 'routine'];
+  }
+  if (parentType === 'milestone_group') {
+    return ['goal', 'project', 'task']; // 모두 is_milestone: true로 생성됨
+  }
+  return [];
+};
+
 export const TreeNode: React.FC<TreeNodeProps> = ({
   node, depth, selectedId, onSelect, onAddChild, onEdit, onDelete, onNodeClick, hideRoutines, hideTasks, search, expanded, pinnedIds, onPinToggle,
   draggingId, setDraggingId, dragOverId, setDragOverId, onMoveNode, focusedId, setFocusedId
@@ -277,6 +288,8 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
   if (hasSearch && !match && !childMatches) {
     return null;
   }
+
+  const allowedTypes = getAllowedChildTypes(node.type);
 
   return (
     <div>
@@ -447,30 +460,21 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
             onClick={e => e.stopPropagation()}
           >
             <div style={{ fontWeight: 500, marginBottom: 6, fontSize: '0.98rem' }}>노드 타입 선택</div>
-            <AddTypeMenuItem
-              tabIndex={0}
-              style={{ pointerEvents: 'auto', zIndex: 99999 }}
-              onClick={() => {
-                console.log('할일 추가 클릭', `/task/new?parentId=${node.id}`);
-                navigate(`/task/new?parentId=${node.id}`);
-              }}
-            >할일 추가</AddTypeMenuItem>
-            <AddTypeMenuItem
-              tabIndex={0}
-              style={{ pointerEvents: 'auto', zIndex: 99999 }}
-              onClick={() => {
-                console.log('루틴 추가 클릭', `/routine/new?parentId=${node.id}`);
-                navigate(`/routine/new?parentId=${node.id}`);
-              }}
-            >루틴 추가</AddTypeMenuItem>
-            <AddTypeMenuItem
-              tabIndex={0}
-              style={{ pointerEvents: 'auto', zIndex: 99999 }}
-              onClick={() => {
-                console.log('프로젝트 추가 클릭', `/project/new?parentId=${node.id}`);
-                navigate(`/project/new?parentId=${node.id}`);
-              }}
-            >프로젝트 추가</AddTypeMenuItem>
+            {allowedTypes.includes('goal') && (
+              <AddTypeMenuItem onClick={() => navigate(`/goal/new?parentId=${node.id}`)}>목표 추가</AddTypeMenuItem>
+            )}
+            {allowedTypes.includes('project') && (
+              <AddTypeMenuItem onClick={() => navigate(`/project/new?parentId=${node.id}`)}>프로젝트 추가</AddTypeMenuItem>
+            )}
+            {allowedTypes.includes('milestone_group') && (
+              <AddTypeMenuItem onClick={() => navigate(`/milestone_group/new?parentId=${node.id}&parentType=${node.type}`)}>마일스톤 그룹 추가</AddTypeMenuItem>
+            )}
+            {allowedTypes.includes('task') && (
+              <AddTypeMenuItem onClick={() => navigate(`/task/new?parentId=${node.id}&parentType=${node.type}`)}>할일 추가</AddTypeMenuItem>
+            )}
+            {allowedTypes.includes('routine') && (
+              <AddTypeMenuItem onClick={() => navigate(`/routine/new?parentId=${node.id}&parentType=${node.type}`)}>루틴 추가</AddTypeMenuItem>
+            )}
           </div>,
           document.body
         )}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const Container = styled.div`
   max-width: 480px;
@@ -53,6 +53,9 @@ export default function RoutineCreatePage() {
   const [category, setCategory] = useState('');
   const [customCategory, setCustomCategory] = useState('');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const parentId = searchParams.get('parentId');
+  const parentType = searchParams.get('parentType');
 
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setCategory(e.target.value);
@@ -61,12 +64,14 @@ export default function RoutineCreatePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await axios.post('/api/routines', {
+    await axios.post('/api/v1/routines', {
       type: 'routine',
       title,
       start_date: startDate || undefined,
       frequency,
       category: category === '직접입력' ? customCategory : category,
+      parent_id: parentId ? Number(parentId) : undefined,
+      parent_type: parentType || undefined,
     });
     navigate(-1);
   };

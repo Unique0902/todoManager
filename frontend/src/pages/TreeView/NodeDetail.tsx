@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useTreeContext } from '../../components/tree/TreeContext';
-import type { TreeNodeData } from '../../components/tree/TreeContext';
+import { useTreeContext } from '../../components/tree/useTreeContext';
+import type { TreeNodeData } from '../../components/tree/TreeTypes';
 import styled from 'styled-components';
 
 function findNodeById(tree: TreeNodeData[], id: string): TreeNodeData | null {
