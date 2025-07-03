@@ -133,7 +133,12 @@ const GoalTree: React.FC = () => {
   if (!treeData) return <div style={{ padding: 40, textAlign: 'center' }}>존재하지 않는 목표입니다.</div>;
 
   const handleNodeClick = (node: TreeNodeData) => {
-    navigate(`/tree/${goalId}/node/${node.id}`);
+    if (node.type === 'task') navigate(`/task/${node.id}`);
+    else if (node.type === 'routine') navigate(`/routine/${node.id}`);
+    else if (node.type === 'project') navigate(`/project/${node.id}`);
+    else if (node.type === 'goal') navigate(`/goal/${node.id}`);
+    else if (node.type === 'milestone_group') navigate(`/milestone_group/${node.id}`);
+    // 기타 타입 분기 필요시 추가
   };
   const handlePinToggle = (id: string) => {
     setPinnedIds(prev => prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]);
