@@ -40,33 +40,22 @@ export default function TaskEditPage() {
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [checked, setChecked] = useState(false);
-  const [isMilestone, setIsMilestone] = useState(false);
-  const [milestoneDate, setMilestoneDate] = useState('');
-  const [orderIndex, setOrderIndex] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get(`/api/tasks/${id}`).then(res => {
+    axios.get(`/api/v1/tasks/${id}`).then(res => {
       setTitle(res.data.title || '');
       setDueDate(res.data.due_date || '');
       setChecked(res.data.checked || false);
-      setIsMilestone(res.data.is_milestone || false);
-      setMilestoneDate(res.data.milestone_date || '');
-      setOrderIndex(res.data.order_index || '');
     });
   }, [id]);
 
-  const showMilestoneFields = isMilestone;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await axios.patch(`/api/tasks/${id}`, {
+    await axios.patch(`/api/v1/tasks/${id}`, {
       title,
       due_date: dueDate || undefined,
       checked,
-      is_milestone: isMilestone,
-      milestone_date: showMilestoneFields ? milestoneDate : undefined,
-      order_index: showMilestoneFields && orderIndex ? Number(orderIndex) : undefined,
     });
     navigate(-1);
   };
@@ -82,17 +71,6 @@ export default function TaskEditPage() {
         <Label>
           <input type="checkbox" checked={checked} onChange={e => setChecked(e.target.checked)} /> 완료 여부
         </Label>
-        <Label>
-          <input type="checkbox" checked={isMilestone} onChange={e => setIsMilestone(e.target.checked)} /> 마일스톤 특성
-        </Label>
-        {showMilestoneFields && (
-          <>
-            <Label>마일스톤 일자</Label>
-            <Input type="date" value={milestoneDate} onChange={e => setMilestoneDate(e.target.value)} />
-            <Label>마일스톤 내 순서</Label>
-            <Input type="number" value={orderIndex} onChange={e => setOrderIndex(e.target.value)} />
-          </>
-        )}
         <Button type="submit">저장</Button>
       </form>
     </Container>

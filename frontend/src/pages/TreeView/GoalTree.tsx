@@ -137,7 +137,7 @@ const GoalTree: React.FC = () => {
     else if (node.type === 'routine') navigate(`/routine/${node.id}`);
     else if (node.type === 'project') navigate(`/project/${node.id}`);
     else if (node.type === 'goal') navigate(`/goal/${node.id}`);
-    else if (node.type === 'milestone_group') navigate(`/milestone_group/${node.id}`);
+    else if (node.type === 'milestone_group') navigate(`/milestone-group/${node.id}`);
     // 기타 타입 분기 필요시 추가
   };
   const handlePinToggle = (id: string) => {

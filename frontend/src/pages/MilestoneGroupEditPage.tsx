@@ -38,21 +38,18 @@ const Button = styled.button`
 export default function MilestoneGroupEditPage() {
   const { id } = useParams();
   const [title, setTitle] = useState('');
-  const [order, setOrder] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get(`/api/milestone-groups/${id}`).then(res => {
+    axios.get(`/api/v1/milestone-groups/${id}`).then(res => {
       setTitle(res.data.title || '');
-      setOrder(res.data.order || '');
     });
   }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await axios.patch(`/api/milestone-groups/${id}`, {
+    await axios.patch(`/api/v1/milestone-groups/${id}`, {
       title,
-      order: order ? Number(order) : undefined,
     });
     navigate(-1);
   };
@@ -63,8 +60,6 @@ export default function MilestoneGroupEditPage() {
       <form onSubmit={handleSubmit}>
         <Label>마일스톤 그룹명 *</Label>
         <Input value={title} onChange={e => setTitle(e.target.value)} required />
-        <Label>정렬 순서</Label>
-        <Input type="number" value={order} onChange={e => setOrder(e.target.value)} />
         <Button type="submit">저장</Button>
       </form>
     </Container>

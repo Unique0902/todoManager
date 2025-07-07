@@ -10,6 +10,10 @@ class Routine(SQLModel, table=True):
     parent_type: Optional[str] = Field(default=None)  # 'goal', 'project'
     start_date: Optional[date] = None
     frequency: Optional[str] = None
+    frequency_type: Optional[str] = None
+    frequency_days: Optional[str] = None  # JSON 문자열로 저장 (예: '["mon","wed"]')
+    frequency_count: Optional[int] = None
+    frequency_custom: Optional[str] = None
     category: Optional[str] = None
     performed_count: Optional[int] = 0
     performed_dates: Optional[str] = None  # JSON 문자열로 저장 (예: '[{"date": "2025-06-19", "success": true}]')

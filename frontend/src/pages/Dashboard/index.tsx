@@ -1,14 +1,17 @@
 import React from 'react';
 import { Card } from '../../components/common/Card';
-import { useGoals } from '../../hooks/useGoals';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { tasksApi } from '../../services/tasks';
+import { routinesApi } from '../../services/routines';
+import { otherTasksApi } from '../../services/otherTasks';
+import { projectsApi } from '../../services/projects';
+import { milestoneGroupsApi } from '../../services/milestoneGroups';
+import dayjs from 'dayjs';
 import { 
   Target, 
   Calendar, 
-  CheckCircle, 
-  TrendingUp,
-  Plus,
+  CheckCircle,
   Loader2,
-  ArrowUpRight,
   BarChart3,
   Zap
 } from 'lucide-react';
@@ -35,21 +38,6 @@ const PageContainer = styled.div`
   @media (max-width: 900px) {
     padding: 24px 12px 0 12px;
   }
-`;
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-`;
-const Title = styled.h1`
-  font-size: 2rem;
-  font-weight: bold;
-  color: #111827;
-  margin-bottom: 0.5rem;
-`;
-const SubTitle = styled.p`
-  color: #4b5563;
-  font-size: 1.125rem;
 `;
 const PrimaryButton = styled.button`
   display: flex;
@@ -239,11 +227,59 @@ const QuickActionBtnRow = styled.div`
 `;
 
 export const Dashboard: React.FC = () => {
-  // 실제 API 데이터 사용
-  const { data: goals, isLoading, error } = useGoals();
+  // 날짜 상태
+  const [selectedDate, setSelectedDate] = React.useState(dayjs().format('YYYY-MM-DD'));
+  const today = dayjs().format('YYYY-MM-DD');
+  const now = dayjs().format('HH:mm');
+
+  // 데이터 fetch
+  const { data: tasks = [], isLoading, error } = useQuery({ queryKey: ['tasks'], queryFn: tasksApi.getAll });
+  const { data: routines = [], isLoading: routinesLoading, error: routinesError } = useQuery({ queryKey: ['routines'], queryFn: routinesApi.getAll });
+  const { data: otherTasks = [], isLoading: otherTasksLoading, error: otherTasksError } = useQuery({ queryKey: ['otherTasks'], queryFn: otherTasksApi.getAll });
+  const { data: projects = [], isLoading: projectsLoading, error: projectsError } = useQuery({ queryKey: ['projects'], queryFn: projectsApi.getAll });
+  const { data: milestoneGroups = [], isLoading: milestoneGroupsLoading, error: milestoneGroupsError } = useQuery({ queryKey: ['milestoneGroups'], queryFn: milestoneGroupsApi.getAll });
+  const queryClient = useQueryClient();
+
+  // 오늘/선택날짜에 해당하는 할일/루틴/기타할일 필터링
+  const filteredTasks = tasks.filter(t => t.due_date === selectedDate && !t.deleted);
+  const filteredRoutines = routines.filter(r => {
+    // 구조화 반복빈도 정책에 따라 해당 날짜에 포함되는지 판별
+    const d = dayjs(selectedDate);
+    if (!r.frequency_type || r.frequency_type === 'everyday') return true;
+    if (r.frequency_type === 'weekly' && Array.isArray(r.frequency_days)) {
+      const daysEng = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+      const day = daysEng[d.day()];
+      return r.frequency_days.includes(day);
+    }
+    if (r.frequency_type === 'count') return true; // 주X회는 매일 표시(정책 확장 가능)
+    if (r.frequency_type === 'custom') return true;
+    return false;
+  });
+  const filteredOtherTasks: any[] = []; // 기타할일 서비스 파일이 없으므로 임시 빈 배열
+
+  // 할일 체크 핸들러(예시, 실제 API 연동 필요)
+  const handleTaskCheck = async (taskId: string, checked: boolean) => {
+    await tasksApi.update(taskId, { checked });
+    // 쿼리 리프레시 필요
+  };
+  // 루틴 체크(수행) 핸들러(예시)
+  const handleRoutineCheck = async (routineId: string) => {
+    const routine = routines.find(r => r.id === routineId);
+    const performed = Array.isArray(routine?.performed_dates) && routine.performed_dates.some(d => d.date === selectedDate && d.success);
+    if (performed) {
+      await routinesApi.unperform(routineId, selectedDate);
+    } else {
+      await routinesApi.perform(routineId, selectedDate);
+    }
+    queryClient.invalidateQueries({ queryKey: ['routines'] });
+  };
+
+  // 오늘/선택날짜에 해당하는 프로젝트/마일스톤(진행중만)
+  const filteredProjects = projects.filter(p => !p.deleted && (!p.end_date || p.end_date >= selectedDate));
+  const filteredMilestoneGroups = milestoneGroups.filter(m => !m.deleted);
 
   // 로딩 상태
-  if (isLoading) {
+  if (isLoading || routinesLoading || projectsLoading || milestoneGroupsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -258,7 +294,7 @@ export const Dashboard: React.FC = () => {
   }
 
   // 에러 상태
-  if (error) {
+  if (error || routinesError || projectsError || milestoneGroupsError) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="max-w-md text-center">
@@ -277,12 +313,12 @@ export const Dashboard: React.FC = () => {
 
   // 통계 계산
   const stats = {
-    totalGoals: goals?.length || 0,
-    activeProjects: goals?.filter(g => g.type === 'project').length || 0,
-    todayTasks: 8,
-    completedToday: 3,
-    weeklyProgress: 75,
-    activeRoutines: 4
+    totalGoals: 0, // goals 데이터가 없으므로 0으로 설정
+    activeProjects: 0, // projects 데이터가 없으므로 0으로 설정
+    todayTasks: filteredTasks.length + filteredRoutines.length,
+    completedToday: filteredTasks.filter(t => t.checked).length,
+    weeklyProgress: 0, // 주간 진행률 계산 로직 필요
+    activeRoutines: filteredRoutines.length
   };
 
   const todayTasks = [
@@ -300,162 +336,66 @@ export const Dashboard: React.FC = () => {
 
   return (
     <PageContainer>
-      {/* 페이지 헤더 */}
-      <Header>
+      {/* 1. 맨 위: 현재 시간, 추천/격려 메시지 */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:32}}>
         <div>
-          <Title>오늘의 대시보드</Title>
-          <SubTitle>
-            {goals && goals.length > 0 
-              ? `${goals.length}개의 목표로 더 나은 하루를 만들어보세요!` 
-              : '첫 번째 목표를 만들어보세요! 🚀'
-            }
-          </SubTitle>
+          <div style={{fontSize:32,fontWeight:700}}>{now}</div>
+          <div style={{fontSize:18,color:'#2563eb',marginTop:4}}>오늘도 힘내세요! 할 수 있습니다 💪</div>
         </div>
-        <PrimaryButton>
-          <Plus style={{ width: 20, height: 20, marginRight: 8 }} />
-          새로 만들기
-        </PrimaryButton>
-      </Header>
-
-      {/* 통계 카드 */}
-      <StatsGrid>
-        <Card>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <SectionSub style={{ color: '#2563eb', marginBottom: 4, display: 'block' }}>총 목표</SectionSub>
-              <div style={{ fontSize: '2rem', fontWeight: 700, color: '#1e3a8a' }}>{stats.totalGoals}</div>
-              <div style={{ fontSize: '0.8rem', color: '#2563eb', marginTop: 4 }}>현재 진행중</div>
-            </div>
-            <StatIconBox $bg="#3b82f6">
-              <Target style={{ width: 24, height: 24, color: '#fff' }} />
-            </StatIconBox>
-          </div>
-        </Card>
-
-        <Card>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <SectionSub style={{ color: '#16a34a', marginBottom: 4, display: 'block' }}>진행중 프로젝트</SectionSub>
-              <div style={{ fontSize: '2rem', fontWeight: 700, color: '#14532d' }}>{stats.activeProjects}</div>
-              <div style={{ fontSize: '0.8rem', color: '#16a34a', marginTop: 4 }}>활성 프로젝트</div>
-            </div>
-            <StatIconBox $bg="#22c55e">
-              <Calendar style={{ width: 24, height: 24, color: '#fff' }} />
-            </StatIconBox>
-          </div>
-        </Card>
-
-        <Card>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <SectionSub style={{ color: '#f59e0b', marginBottom: 4, display: 'block' }}>오늘 완료</SectionSub>
-              <div style={{ fontSize: '2rem', fontWeight: 700, color: '#78350f' }}>{stats.completedToday}/{stats.todayTasks}</div>
-              <div style={{ fontSize: '0.8rem', color: '#f59e0b', marginTop: 4 }}>할일 달성률</div>
-            </div>
-            <StatIconBox $bg="#f59e0b">
-              <CheckCircle style={{ width: 24, height: 24, color: '#fff' }} />
-            </StatIconBox>
-          </div>
-        </Card>
-
-        <Card>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <SectionSub style={{ color: '#a21caf', marginBottom: 4, display: 'block' }}>주간 진행률</SectionSub>
-              <div style={{ fontSize: '2rem', fontWeight: 700, color: '#581c87' }}>{stats.weeklyProgress}%</div>
-              <div style={{ fontSize: '0.8rem', color: '#a21caf', marginTop: 4 }}>전체 진행도</div>
-            </div>
-            <StatIconBox $bg="#a21caf">
-              <TrendingUp style={{ width: 24, height: 24, color: '#fff' }} />
-            </StatIconBox>
-          </div>
-        </Card>
-      </StatsGrid>
-
-      {/* 목표 목록 */}
-      {goals && goals.length > 0 && (
-        <Card>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-            <SectionTitle>최근 목표</SectionTitle>
-            <PrimaryButton style={{ background: 'none', color: '#2563eb', boxShadow: 'none', fontWeight: 500 }}>
-              모두 보기
-              <ArrowUpRight style={{ width: 16, height: 16, marginLeft: 4 }} />
-            </PrimaryButton>
-          </div>
-          <GoalList>
-            {goals.slice(0, 5).map((goal, index) => (
-              <GoalItem key={goal.id}>
-                <GoalIndex>{index + 1}</GoalIndex>
-                <GoalInfo>
-                  <div style={{ fontWeight: 600, fontSize: '1rem', color: '#111827', marginBottom: 2 }}>{goal.title}</div>
-                  {goal.description && (
-                    <div style={{ fontSize: '0.95rem', color: '#4b5563' }}>{goal.description}</div>
-                  )}
-                </GoalInfo>
-                <GoalDate>
-                  {new Date(goal.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
-                  <Dot />
-                </GoalDate>
-              </GoalItem>
-            ))}
-          </GoalList>
-        </Card>
-      )}
-
-      {/* 오늘의 할일과 최근 활동 */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-        <Card>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-            <SectionTitle>오늘의 할일</SectionTitle>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Dot style={{ background: '#22c55e' }} />
-              <SectionSub>{stats.completedToday}/{stats.todayTasks} 완료</SectionSub>
-            </div>
-          </div>
-          <TaskList>
-            {todayTasks.map((task) => (
-              <TaskRow key={task.id}>
-                <TaskCheckbox checked={task.completed} readOnly />
-                <div style={{ flex: 1 }}>
-                  <TaskTitle $completed={task.completed}>{task.title}</TaskTitle>
-                  <BadgeRow>
-                    <Badge $bg={task.type === 'routine' ? '#dbeafe' : '#bbf7d0'} $color={task.type === 'routine' ? '#1d4ed8' : '#15803d'}>
-                      {task.type === 'routine' ? '루틴' : '할일'}
-                    </Badge>
-                    <Badge
-                      $bg={task.priority === 'high' ? '#fee2e2' : task.priority === 'medium' ? '#fef3c7' : '#f3f4f6'}
-                      $color={task.priority === 'high' ? '#b91c1c' : task.priority === 'medium' ? '#b45309' : '#374151'}
-                    >
-                      {task.priority === 'high' ? '높음' : task.priority === 'medium' ? '보통' : '낮음'}
-                    </Badge>
-                  </BadgeRow>
-                </div>
+        <input type="date" value={selectedDate} onChange={e=>setSelectedDate(e.target.value)} style={{fontSize:18,padding:8,borderRadius:8,border:'1px solid #ddd'}} />
+      </div>
+      {/* 2. 오늘의 할일/루틴/기타할일 리스트 */}
+      <Card>
+        <SectionTitle>{selectedDate === today ? '오늘의 할일' : `${selectedDate}의 할일`}</SectionTitle>
+        <div style={{marginTop:16}}>
+          {[...filteredTasks, ...filteredRoutines, ...filteredOtherTasks].length === 0 && <div>할일이 없습니다.</div>}
+          {filteredTasks.map(task => (
+            <TaskRow key={task.id}>
+              <TaskCheckbox checked={task.checked} onChange={e=>handleTaskCheck(task.id, e.target.checked)} />
+              <TaskTitle $completed={task.checked}>{task.title}</TaskTitle>
+              <Badge $bg="#bbf7d0" $color="#15803d">할일</Badge>
+            </TaskRow>
+          ))}
+          {filteredRoutines.map(routine => {
+            // 오늘 수행했는지 판별
+            const performed = Array.isArray(routine.performed_dates) && routine.performed_dates.some(d => d.date === selectedDate && d.success);
+            return (
+              <TaskRow key={routine.id}>
+                <TaskCheckbox checked={performed} onChange={()=>handleRoutineCheck(routine.id)} />
+                <TaskTitle $completed={performed}>{routine.title}</TaskTitle>
+                <Badge $bg="#dbeafe" $color="#1d4ed8">루틴</Badge>
               </TaskRow>
-            ))}
-          </TaskList>
+            );
+          })}
+          {/* 기타할일 서비스 파일이 없으므로 기타할일 리스트는 임시로 비활성화 */}
+        </div>
+      </Card>
+      {/* 3. 오늘/선택날짜에 해당하는 프로젝트/마일스톤(진행중) */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:32,marginTop:40}}>
+        <Card>
+          <SectionTitle>진행중인 프로젝트</SectionTitle>
+          {filteredProjects.length === 0 && <div>진행중인 프로젝트가 없습니다.</div>}
+          {filteredProjects.map(p => (
+            <GoalItem key={p.id}>
+              <GoalInfo>
+                <div style={{fontWeight:600,fontSize:'1rem',color:'#111827',marginBottom:2}}>{p.title}</div>
+                {p.description && <div style={{fontSize:'0.95rem',color:'#4b5563'}}>{p.description}</div>}
+              </GoalInfo>
+              <GoalDate>{p.start_date} ~ {p.end_date}</GoalDate>
+            </GoalItem>
+          ))}
         </Card>
         <Card>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-            <SectionTitle>최근 활동</SectionTitle>
-            <PrimaryButton style={{ background: 'none', color: '#2563eb', boxShadow: 'none', fontWeight: 500 }}>
-              활동 기록
-              <ArrowUpRight style={{ width: 16, height: 16, marginLeft: 4 }} />
-            </PrimaryButton>
-          </div>
-          <ActivityList>
-            {recentActivities.map((activity) => (
-              <ActivityRow key={activity.id}>
-                <ActivityIconBox $bg={activity.type === 'goal' ? '#3b82f6' : activity.type === 'routine' ? '#22c55e' : '#f59e0b'}>
-                  <activity.icon style={{ width: 20, height: 20, color: '#fff' }} />
-                </ActivityIconBox>
-                <ActivityInfo>
-                  <div style={{ fontWeight: 500, fontSize: '1rem', color: '#111827' }}>{activity.title}</div>
-                  <div style={{ fontSize: '0.9rem', color: '#6b7280' }}>{activity.time}</div>
-                </ActivityInfo>
-                <Dot />
-              </ActivityRow>
-            ))}
-          </ActivityList>
+          <SectionTitle>진행중인 마일스톤</SectionTitle>
+          {filteredMilestoneGroups.length === 0 && <div>진행중인 마일스톤이 없습니다.</div>}
+          {filteredMilestoneGroups.map(m => (
+            <GoalItem key={m.id}>
+              <GoalInfo>
+                <div style={{fontWeight:600,fontSize:'1rem',color:'#111827',marginBottom:2}}>{m.title}</div>
+                {m.description && <div style={{fontSize:'0.95rem',color:'#4b5563'}}>{m.description}</div>}
+              </GoalInfo>
+            </GoalItem>
+          ))}
         </Card>
       </div>
 

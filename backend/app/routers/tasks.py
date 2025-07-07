@@ -40,7 +40,7 @@ def create_task(task: Task, session: Session = Depends(get_session)):
 # Task 전체 조회
 @router.get("/", response_model=List[Task])
 def read_tasks(session: Session = Depends(get_session)):
-    tasks = session.exec(select(Task)).all()
+    tasks = session.exec(select(Task).order_by(Task.id)).all()
     return tasks
 
 # Task 단일 조회

@@ -49,7 +49,10 @@ const CATEGORY_OPTIONS = [
 export default function RoutineCreatePage() {
   const [title, setTitle] = useState('');
   const [startDate, setStartDate] = useState('');
-  const [frequency, setFrequency] = useState('');
+  const [frequencyType, setFrequencyType] = useState('everyday');
+  const [frequencyDays, setFrequencyDays] = useState<string[]>([]);
+  const [frequencyCount, setFrequencyCount] = useState('');
+  const [frequencyCustom, setFrequencyCustom] = useState('');
   const [category, setCategory] = useState('');
   const [customCategory, setCustomCategory] = useState('');
   const navigate = useNavigate();
@@ -62,19 +65,53 @@ export default function RoutineCreatePage() {
     if (e.target.value !== '직접입력') setCustomCategory('');
   };
 
+  // frequencyType 변경 시 관련 상태 초기화
+  const handleFrequencyTypeChange = (type: string) => {
+    setFrequencyType(type);
+    setFrequencyDays([]);
+    setFrequencyCount('');
+    setFrequencyCustom('');
+  };
+
+  const handleDayToggle = (day: string) => {
+    setFrequencyDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // 검증 로직 추가
+    if (frequencyType === 'weekly' && frequencyDays.length === 0) {
+      alert('요일을 1개 이상 선택하세요.');
+      return;
+    }
+    if (frequencyType === 'count') {
+      const n = Number(frequencyCount);
+      if (!frequencyCount || isNaN(n)) {
+        alert('주 몇 회 반복할지 숫자를 입력하세요.');
+        return;
+      }
+      if (n < 1 || n > 7) {
+        alert('주 반복 횟수는 1~7 사이여야 합니다.');
+        return;
+      }
+    }
     await axios.post('/api/v1/routines', {
       type: 'routine',
       title,
       start_date: startDate || undefined,
-      frequency,
+      frequency_type: frequencyType,
+      frequency_days: frequencyType === 'weekly' ? frequencyDays : undefined,
+      frequency_count: frequencyType === 'count' ? Number(frequencyCount) : undefined,
+      frequency_custom: frequencyType === 'custom' ? frequencyCustom : undefined,
       category: category === '직접입력' ? customCategory : category,
       parent_id: parentId ? Number(parentId) : undefined,
       parent_type: parentType || undefined,
     });
     navigate(-1);
   };
+
+  const days = ['월', '화', '수', '목', '금', '토', '일'];
+  const daysEng = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
   return (
     <Container>
@@ -85,7 +122,31 @@ export default function RoutineCreatePage() {
         <Label>시작일 *</Label>
         <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
         <Label>반복 빈도 *</Label>
-        <Input value={frequency} onChange={e => setFrequency(e.target.value)} placeholder="예: 매일, 주 3회" required />
+        <div style={{marginBottom:16}}>
+          <label><input type="radio" name="frequencyType" value="everyday" checked={frequencyType==='everyday'} onChange={()=>handleFrequencyTypeChange('everyday')} /> 매일</label>
+          <label style={{marginLeft:16}}><input type="radio" name="frequencyType" value="weekly" checked={frequencyType==='weekly'} onChange={()=>handleFrequencyTypeChange('weekly')} /> 요일 선택</label>
+          <label style={{marginLeft:16}}><input type="radio" name="frequencyType" value="count" checked={frequencyType==='count'} onChange={()=>handleFrequencyTypeChange('count')} /> 주 X회</label>
+          <label style={{marginLeft:16}}><input type="radio" name="frequencyType" value="custom" checked={frequencyType==='custom'} onChange={()=>handleFrequencyTypeChange('custom')} /> 직접입력</label>
+        </div>
+        {frequencyType === 'weekly' && (
+          <div style={{marginBottom:16}}>
+            {days.map((d, i) => (
+              <label key={d} style={{marginRight:8}}>
+                <input type="checkbox" checked={frequencyDays.includes(daysEng[i])} onChange={()=>handleDayToggle(daysEng[i])} /> {d}
+              </label>
+            ))}
+          </div>
+        )}
+        {frequencyType === 'count' && (
+          <div style={{marginBottom:16}}>
+            <Input type="number" min={1} value={frequencyCount} onChange={e => setFrequencyCount(e.target.value)} placeholder="주 몇 회" required={frequencyType==='count'} />
+          </div>
+        )}
+        {frequencyType === 'custom' && (
+          <div style={{marginBottom:16}}>
+            <Input value={frequencyCustom} onChange={e => setFrequencyCustom(e.target.value)} placeholder="반복 패턴 직접입력" required={frequencyType==='custom'} />
+          </div>
+        )}
         <Label>카테고리</Label>
         <CategorySelect value={category} onChange={handleCategoryChange}>
           {CATEGORY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt || '선택안함'}</option>)}

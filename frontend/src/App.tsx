@@ -6,7 +6,6 @@ import { Dashboard } from './pages/Dashboard';
 import { useAuthStore } from './store/auth';
 import { ThemeProvider, createGlobalStyle } from 'styled-components';
 import TreeViewPage from './pages/TreeView';
-import NodeDetail from './pages/TreeView/NodeDetail';
 import NodeEdit from './pages/TreeView/NodeEdit';
 import NodeCreate from './pages/TreeView/NodeCreate';
 import NodeDelete from './pages/TreeView/NodeDelete';
@@ -22,6 +21,12 @@ import RoutineCreatePage from './pages/RoutineCreatePage';
 import ProjectCreatePage from './pages/ProjectCreatePage';
 import GoalCreatePage from './pages/GoalCreatePage';
 import MilestoneGroupCreatePage from './pages/MilestoneGroupCreatePage';
+import GoalDetailPage from './pages/GoalDetailPage';
+import ProjectDetailPage from './pages/ProjectDetailPage';
+import TaskDetailPage from './pages/TaskDetailPage';
+import RoutineDetailPage from './pages/RoutineDetailPage';
+import MilestoneGroupDetailPage from './pages/MilestoneGroupDetailPage';
+import RoutinesPage from './pages/RoutinesPage';
 
 // 글로벌 테마 정의
 const theme = {
@@ -151,15 +156,6 @@ function App() {
                   </Layout>
                 </ProtectedRoute>
               } />
-              <Route path="/tree/:goalId/node/:nodeId" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <TreeProvider>
-                      <NodeDetail />
-                    </TreeProvider>
-                  </Layout>
-                </ProtectedRoute>
-              } />
               <Route path="/tree/:goalId/node/:nodeId/edit" element={
                 <ProtectedRoute>
                   <Layout>
@@ -196,16 +192,28 @@ function App() {
                   </Layout>
                 </ProtectedRoute>
               } />
+              <Route path="/goal/:id" element={<Layout><GoalDetailPage /></Layout>} />
               <Route path="/task/edit/:id" element={<Layout><TaskEditPage /></Layout>} />
               <Route path="/routine/edit/:id" element={<Layout><RoutineEditPage /></Layout>} />
               <Route path="/project/edit/:id" element={<Layout><ProjectEditPage /></Layout>} />
               <Route path="/goal/edit/:id" element={<Layout><GoalEditPage /></Layout>} />
-              <Route path="/milestone_group/edit/:id" element={<Layout><MilestoneGroupEditPage /></Layout>} />
+              <Route path="/milestone-group/edit/:id" element={<Layout><MilestoneGroupEditPage /></Layout>} />
               <Route path="/task/new" element={<Layout><TaskCreatePage /></Layout>} />
               <Route path="/routine/new" element={<Layout><RoutineCreatePage /></Layout>} />
               <Route path="/project/new" element={<Layout><ProjectCreatePage /></Layout>} />
               <Route path="/goal/new" element={<Layout><GoalCreatePage /></Layout>} />
-              <Route path="/milestone_group/new" element={<Layout><MilestoneGroupCreatePage /></Layout>} />
+              <Route path="/milestone-group/new" element={<Layout><MilestoneGroupCreatePage /></Layout>} />
+              <Route path="/project/:id" element={<Layout><ProjectDetailPage /></Layout>} />
+              <Route path="/task/:id" element={<Layout><TaskDetailPage /></Layout>} />
+              <Route path="/routine/:id" element={<Layout><RoutineDetailPage /></Layout>} />
+              <Route path="/milestone-group/:id" element={<Layout><MilestoneGroupDetailPage /></Layout>} />
+              <Route path="/routines" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <RoutinesPage />
+                  </Layout>
+                </ProtectedRoute>
+              } />
               {/* 임시로 대시보드만 구현 */}
               <Route path="*" element={
                 <ProtectedRoute>

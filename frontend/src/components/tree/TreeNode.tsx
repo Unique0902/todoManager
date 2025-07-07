@@ -432,7 +432,7 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
                 else if (node.type === 'routine') navigate(`/routine/edit/${node.id}`);
                 else if (node.type === 'project') navigate(`/project/edit/${node.id}`);
                 else if (node.type === 'goal') navigate(`/goal/edit/${node.id}`);
-                else if (node.type === 'milestone_group') navigate(`/milestone_group/edit/${node.id}`);
+                else if (node.type === 'milestone_group') navigate(`/milestone-group/edit/${node.id}`);
                 else setEditMode(true);
               }}>수정</MenuItem>
               <MenuItem onClick={() => { onDelete && onDelete(node.id); setShowMenu(false); }}>삭제</MenuItem>
@@ -467,7 +467,7 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
               <AddTypeMenuItem onClick={() => navigate(`/project/new?parentId=${node.id}`)}>프로젝트 추가</AddTypeMenuItem>
             )}
             {allowedTypes.includes('milestone_group') && (
-              <AddTypeMenuItem onClick={() => navigate(`/milestone_group/new?parentId=${node.id}&parentType=${node.type}`)}>마일스톤 그룹 추가</AddTypeMenuItem>
+              <AddTypeMenuItem onClick={() => navigate(`/milestone-group/new?parentId=${node.id}&parentType=${node.type}`)}>마일스톤 그룹 추가</AddTypeMenuItem>
             )}
             {allowedTypes.includes('task') && (
               <AddTypeMenuItem onClick={() => navigate(`/task/new?parentId=${node.id}&parentType=${node.type}`)}>할일 추가</AddTypeMenuItem>

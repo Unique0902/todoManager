@@ -81,6 +81,11 @@ export interface Routine extends BaseNode {
     details: string;
     date: string;
   }>;
+  // 구조화 반복빈도 필드 추가
+  frequency_type?: string;
+  frequency_days?: string[];
+  frequency_count?: number;
+  frequency_custom?: string;
 }
 
 // 마일스톤 그룹 노드

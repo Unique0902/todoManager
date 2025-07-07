@@ -39,32 +39,26 @@ export default function ProjectEditPage() {
   const { id } = useParams();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [order, setOrder] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [isMilestone, setIsMilestone] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get(`/api/projects/${id}`).then(res => {
+    axios.get(`/api/v1/projects/${id}`).then(res => {
       setTitle(res.data.title || '');
       setDescription(res.data.description || '');
-      setOrder(res.data.order || '');
       setStartDate(res.data.start_date || '');
       setEndDate(res.data.end_date || '');
-      setIsMilestone(res.data.is_milestone || false);
     });
   }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await axios.patch(`/api/projects/${id}`, {
+    await axios.patch(`/api/v1/projects/${id}`, {
       title,
       description,
-      order: order ? Number(order) : undefined,
       start_date: startDate || undefined,
       end_date: endDate || undefined,
-      is_milestone: isMilestone,
     });
     navigate(-1);
   };
@@ -77,15 +71,10 @@ export default function ProjectEditPage() {
         <Input value={title} onChange={e => setTitle(e.target.value)} required />
         <Label>설명</Label>
         <Input value={description} onChange={e => setDescription(e.target.value)} />
-        <Label>정렬 순서</Label>
-        <Input type="number" value={order} onChange={e => setOrder(e.target.value)} />
         <Label>시작일 *</Label>
         <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
         <Label>종료일 *</Label>
         <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} required />
-        <Label>
-          <input type="checkbox" checked={isMilestone} onChange={e => setIsMilestone(e.target.checked)} /> 마일스톤 특성
-        </Label>
         <Button type="submit">저장</Button>
       </form>
     </Container>
