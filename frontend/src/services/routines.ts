@@ -75,4 +75,14 @@ export const routinesApi = {
       throw new Error(getErrorMessage(error as AxiosError));
     }
   },
+
+  // 루틴 실패 기록
+  fail: async (routineId: string, failData: {date: string, reason: string, mood?: string, context?: string}) => {
+    try {
+      const response = await apiClient.post(`/routines/${routineId}/fail`, failData);
+      return apiResponse(response);
+    } catch (error) {
+      throw new Error(getErrorMessage(error as AxiosError));
+    }
+  },
 }; 

@@ -52,7 +52,7 @@ export default function TaskEditPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await axios.patch(`/api/v1/tasks/${id}`, {
+    await axios.put(`/api/v1/tasks/${id}`, {
       title,
       due_date: dueDate || undefined,
       checked,

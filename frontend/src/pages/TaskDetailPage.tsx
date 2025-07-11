@@ -107,6 +107,28 @@ const TaskDetailPage = () => {
           <span style={valueStyle}>{task.milestone_date}</span>
         </div>
       )}
+      {task.history_log && (() => {
+        let logs: any[] = [];
+        try {
+          logs = JSON.parse(task.history_log);
+        } catch {}
+        const dueLogs = logs.filter(l => l.field === 'due_date');
+        if (dueLogs.length === 0) return null;
+        return (
+          <div style={{marginTop:32}}>
+            <div style={{fontWeight:600,marginBottom:8,fontSize:16,color:'#2563eb'}}>미룸/날짜 변경 이력</div>
+            <ul style={{paddingLeft:0,listStyle:'none'}}>
+              {dueLogs.map((log, idx) => (
+                <li key={idx} style={{marginBottom:8,fontSize:15}}>
+                  <span style={{color:'#64748b'}}>{log.changed_at ? new Date(log.changed_at).toLocaleString() : ''}</span>
+                  <span style={{marginLeft:8}}>→ <b>{log.before}</b> 에서 <b>{log.after}</b>로 변경</span>
+                  {log.reason && <span style={{marginLeft:8,color:'#f59e42'}}>[{log.reason}]</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })()}
       {/* 기타 필드, 액션 등은 추후 추가 */}
     </div>
   );

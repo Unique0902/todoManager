@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '../../components/common/Card';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { tasksApi } from '../../services/tasks';
@@ -6,6 +6,7 @@ import { routinesApi } from '../../services/routines';
 import { otherTasksApi } from '../../services/otherTasks';
 import { projectsApi } from '../../services/projects';
 import { milestoneGroupsApi } from '../../services/milestoneGroups';
+import { emotionJournalsApi } from '../../services/emotionJournals';
 import dayjs from 'dayjs';
 import { 
   Target, 
@@ -16,6 +17,7 @@ import {
   Zap
 } from 'lucide-react';
 import styled from 'styled-components';
+import { useNavigate } from 'react-router-dom';
 
 // theme 타입 임시 선언 (App.tsx의 theme 구조와 동일하게)
 type ThemeType = {
@@ -231,6 +233,18 @@ export const Dashboard: React.FC = () => {
   const [selectedDate, setSelectedDate] = React.useState(dayjs().format('YYYY-MM-DD'));
   const today = dayjs().format('YYYY-MM-DD');
   const now = dayjs().format('HH:mm');
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackDone, setFeedbackDone] = useState(false);
+  const [taskMoveDates, setTaskMoveDates] = useState<{[taskId:string]: string}>({});
+  const [routineFails, setRoutineFails] = useState<{[routineId:string]: {reason:string, mood:string, context:string}}>({});
+  const navigate = useNavigate();
+
+  // 1. 피드백 모달 단계 상태 추가
+  const [feedbackStep, setFeedbackStep] = useState(1);
+  const [completedTasks, setCompletedTasks] = useState<{[id:string]: boolean}>({});
+  const [completedRoutines, setCompletedRoutines] = useState<{[id:string]: boolean}>({});
+  const [pendingTaskDates, setPendingTaskDates] = useState<{[id:string]: string}>({});
+  const [pendingRoutineFails, setPendingRoutineFails] = useState<{[id:string]: {reason?:string, mood?:string, context?:string}}>();
 
   // 데이터 fetch
   const { data: tasks = [], isLoading, error } = useQuery({ queryKey: ['tasks'], queryFn: tasksApi.getAll });
@@ -240,8 +254,22 @@ export const Dashboard: React.FC = () => {
   const { data: milestoneGroups = [], isLoading: milestoneGroupsLoading, error: milestoneGroupsError } = useQuery({ queryKey: ['milestoneGroups'], queryFn: milestoneGroupsApi.getAll });
   const queryClient = useQueryClient();
 
-  // 오늘/선택날짜에 해당하는 할일/루틴/기타할일 필터링
-  const filteredTasks = tasks.filter(t => t.due_date === selectedDate && !t.deleted);
+  // filteredTasks 계산 로직 수정
+  const filteredTasks = tasks.filter(t => {
+    if (t.due_date === selectedDate && !t.deleted) return true;
+    // history_log에 미룸 이력이 있는지 확인
+    if (t.history_log) {
+      try {
+        const logs = JSON.parse(t.history_log);
+        if (Array.isArray(logs)) {
+          return logs.some(l => l.field === 'due_date' && l.before === selectedDate);
+        }
+      } catch {}
+    }
+    return false;
+  });
+  // 미룸 Task 판별 함수
+  const isDeferredTask = (task: any) => task.due_date !== selectedDate;
   const filteredRoutines = routines.filter(r => {
     // 구조화 반복빈도 정책에 따라 해당 날짜에 포함되는지 판별
     const d = dayjs(selectedDate);
@@ -260,7 +288,7 @@ export const Dashboard: React.FC = () => {
   // 할일 체크 핸들러(예시, 실제 API 연동 필요)
   const handleTaskCheck = async (taskId: string, checked: boolean) => {
     await tasksApi.update(taskId, { checked });
-    // 쿼리 리프레시 필요
+    queryClient.invalidateQueries({ queryKey: ['tasks'] });
   };
   // 루틴 체크(수행) 핸들러(예시)
   const handleRoutineCheck = async (routineId: string) => {
@@ -277,6 +305,53 @@ export const Dashboard: React.FC = () => {
   // 오늘/선택날짜에 해당하는 프로젝트/마일스톤(진행중만)
   const filteredProjects = projects.filter(p => !p.deleted && (!p.end_date || p.end_date >= selectedDate));
   const filteredMilestoneGroups = milestoneGroups.filter(m => !m.deleted);
+
+  // 피드백 모달 내부에서 사용할 함수들
+  const handleMoveTaskDate = (taskId: string, newDate: string) => {
+    setTaskMoveDates(prev => ({...prev, [taskId]: newDate}));
+  };
+  const handleRoutineFailChange = (routineId: string, field: string, value: string) => {
+    setRoutineFails(prev => ({
+      ...prev,
+      [routineId]: {
+        ...prev?.[routineId],
+        [field]: value
+      }
+    }));
+  };
+  const handleFeedbackSubmit = async () => {
+    // 1. 미완료 할일 날짜 이동
+    for (const taskId in taskMoveDates) {
+      const newDate = taskMoveDates[taskId];
+      if (newDate) {
+        await tasksApi.update(taskId, { due_date: newDate });
+      }
+    }
+    // 2. 실패 루틴 사유 기록
+    for (const routineId in routineFails || {}) {
+      const fail = routineFails?.[routineId];
+      if (fail && fail.reason) {
+        await routinesApi.fail(routineId, {
+          date: selectedDate,
+          reason: fail.reason,
+          mood: fail.mood,
+          context: fail.context
+        });
+      }
+    }
+    setFeedbackOpen(false);
+    setTimeout(() => {
+      navigate(`/emotion-journal?date=${selectedDate}`);
+    }, 100);
+  };
+
+  React.useEffect(() => {
+    // 선택한 날짜의 감정일기 존재 여부 조회
+    (async () => {
+      const journal = await emotionJournalsApi.getByDate(selectedDate);
+      setFeedbackDone(!!journal);
+    })();
+  }, [selectedDate, feedbackOpen]);
 
   // 로딩 상태
   if (isLoading || routinesLoading || projectsLoading || milestoneGroupsLoading) {
@@ -334,6 +409,164 @@ export const Dashboard: React.FC = () => {
     { id: 3, type: 'task', title: '보고서 제출 완료', time: '1일 전', icon: Calendar },
   ];
 
+  // 피드백 모달 내부 렌더링 함수
+  const renderFeedbackModal = () => {
+    // 1단계: 미완료 리스트 & 완료처리
+    if (feedbackStep === 1) {
+      const incompleteTasks = filteredTasks.filter(t => !t.checked && !completedTasks[t.id]);
+      const incompleteRoutines = filteredRoutines.filter(r => {
+        const performed = Array.isArray(r.performed_dates) && r.performed_dates.some(d => d.date === selectedDate && d.success);
+        return !performed && !completedRoutines[r.id];
+      });
+      const allDone = incompleteTasks.length === 0 && incompleteRoutines.length === 0;
+      return (
+        <div>
+          <div style={{fontWeight:700,fontSize:20,marginBottom:16}}>{selectedDate} 피드백</div>
+          {allDone ? (
+            <div style={{textAlign:'center',margin:'32px 0'}}>
+              <div style={{fontSize:24,marginBottom:12}}>🎉 오늘 모든 일을 완료했습니다!</div>
+              <button style={{fontSize:16,padding:'8px 20px',borderRadius:8,background:'#2563eb',color:'#fff',border:'none',cursor:'pointer',fontWeight:700}} onClick={()=>{setFeedbackOpen(false);navigate(`/emotion-journal?date=${selectedDate}`);}}>
+                감정일기 작성하러 가기
+              </button>
+            </div>
+          ) : (
+            <>
+              <div style={{marginBottom:24}}>
+                <div style={{fontWeight:600,marginBottom:8}}>미완료 할일(Task)</div>
+                {incompleteTasks.length === 0 ? <div>미완료 할일 없음</div> : (
+                  <ul style={{paddingLeft:0,listStyle:'none'}}>
+                    {incompleteTasks.map(task => (
+                      <li key={task.id} style={{marginBottom:8,display:'flex',alignItems:'center',gap:8}}>
+                        <span style={{fontWeight:500}}>{task.title}</span>
+                        <label style={{marginLeft:12,display:'flex',alignItems:'center',gap:4}}>
+                          <input type="checkbox" checked={!!completedTasks[task.id]} onChange={e=>setCompletedTasks(prev=>({...prev,[task.id]:e.target.checked}))} />
+                          <span style={{fontSize:13,color:'#2563eb'}}>여기서 바로 완료 처리</span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div style={{marginBottom:24}}>
+                <div style={{fontWeight:600,marginBottom:8}}>미완료 루틴(Routine)</div>
+                {incompleteRoutines.length === 0 ? <div>미완료 루틴 없음</div> : (
+                  <ul style={{paddingLeft:0,listStyle:'none'}}>
+                    {incompleteRoutines.map(routine => (
+                      <li key={routine.id} style={{marginBottom:8,display:'flex',alignItems:'center',gap:8}}>
+                        <span style={{fontWeight:500}}>{routine.title}</span>
+                        <label style={{marginLeft:12,display:'flex',alignItems:'center',gap:4}}>
+                          <input type="checkbox" checked={!!completedRoutines[routine.id]} onChange={e=>setCompletedRoutines(prev=>({...prev,[routine.id]:e.target.checked}))} />
+                          <span style={{fontSize:13,color:'#2563eb'}}>여기서 바로 완료 처리</span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div style={{marginTop:24,textAlign:'right'}}>
+                <button style={{fontSize:16,padding:'8px 20px',borderRadius:8,background:'#2563eb',color:'#fff',border:'none',cursor:'pointer',fontWeight:700}} onClick={()=>setFeedbackStep(2)}>
+                  다음
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      );
+    }
+    // 2단계: 미루기/실패사유 입력
+    if (feedbackStep === 2) {
+      const incompleteTasks = filteredTasks.filter(t => !t.checked && !completedTasks[t.id]);
+      const incompleteRoutines = filteredRoutines.filter(r => {
+        const performed = Array.isArray(r.performed_dates) && r.performed_dates.some(d => d.date === selectedDate && d.success);
+        return !performed && !completedRoutines[r.id];
+      });
+      return (
+        <div>
+          <div style={{fontWeight:700,fontSize:20,marginBottom:16}}>{selectedDate} 미루기/실패사유 입력</div>
+          <div style={{marginBottom:24}}>
+            <div style={{fontWeight:600,marginBottom:8}}>미완료 할일(Task) 미루기</div>
+            {incompleteTasks.length === 0 ? <div>미루기 할 할일 없음</div> : (
+              <ul style={{paddingLeft:0,listStyle:'none'}}>
+                {incompleteTasks.map(task => (
+                  <li key={task.id} style={{marginBottom:8,display:'flex',alignItems:'center',gap:8}}>
+                    <span style={{fontWeight:500}}>{task.title}</span>
+                    <button style={{marginLeft:8,padding:'2px 8px',borderRadius:4,border:'1px solid #ddd',background:'#f3f4f6',cursor:'pointer'}} onClick={()=>setPendingTaskDates(prev=>({...prev,[task.id]:selectedDate}))}>미루기</button>
+                    {pendingTaskDates[task.id] && (
+                      <>
+                        <input type="date" value={pendingTaskDates[task.id]} min={selectedDate} onChange={e=>setPendingTaskDates(prev=>({...prev,[task.id]:e.target.value}))} style={{marginLeft:8}} />
+                        <button style={{marginLeft:4,padding:'2px 8px',borderRadius:4,border:'1px solid #2563eb',background:'#dbeafe',color:'#1d4ed8',cursor:'pointer',fontWeight:600}} onClick={async()=>{await tasksApi.update(task.id, { due_date: pendingTaskDates[task.id] }); queryClient.invalidateQueries({ queryKey: ['tasks'] }); setPendingTaskDates(prev=>{const copy={...prev};delete copy[task.id];return copy;});}}>
+                          저장
+                        </button>
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div style={{marginBottom:24}}>
+            <div style={{fontWeight:600,marginBottom:8}}>미완료 루틴(Routine) 실패 사유</div>
+            {incompleteRoutines.length === 0 ? <div>실패 사유 입력할 루틴 없음</div> : (
+              <ul style={{paddingLeft:0,listStyle:'none'}}>
+                {incompleteRoutines.map(routine => (
+                  <li key={routine.id} style={{marginBottom:12,display:'flex',alignItems:'center',gap:10}}>
+                    <span
+                      style={{
+                        fontWeight:500,
+                        minWidth:40, // 최소 2~3글자 보장
+                        maxWidth:120, // 너무 길면 ... 처리
+                        flexGrow:1, // 공간 여유 있으면 더 넓게
+                        whiteSpace:'nowrap',
+                        overflow:'hidden',
+                        textOverflow:'ellipsis',
+                        display:'inline-block',
+                        verticalAlign:'middle',
+                      }}
+                      title={routine.title}
+                    >
+                      {routine.title}
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="실패 사유"
+                      value={pendingRoutineFails?.[routine.id]?.reason||''}
+                      onChange={e=>setPendingRoutineFails(prev=>({...prev,[routine.id]:{...prev?.[routine.id],reason:e.target.value}}))}
+                      style={{width: '32%', minWidth: 80, maxWidth: 180, marginRight: 4, padding: '6px 8px', borderRadius: 6, border: '1px solid #ddd'}}
+                    />
+                    <input
+                      type="text"
+                      placeholder="감정(선택)"
+                      value={pendingRoutineFails?.[routine.id]?.mood||''}
+                      onChange={e=>setPendingRoutineFails(prev=>({...prev,[routine.id]:{...prev?.[routine.id],mood:e.target.value}}))}
+                      style={{width: '18%', minWidth: 60, maxWidth: 100, marginRight: 4, padding: '6px 8px', borderRadius: 6, border: '1px solid #ddd'}}
+                    />
+                    <input
+                      type="text"
+                      placeholder="상황(선택)"
+                      value={pendingRoutineFails?.[routine.id]?.context||''}
+                      onChange={e=>setPendingRoutineFails(prev=>({...prev,[routine.id]:{...prev?.[routine.id],context:e.target.value}}))}
+                      style={{width: '18%', minWidth: 60, maxWidth: 100, marginRight: 8, padding: '6px 8px', borderRadius: 6, border: '1px solid #ddd'}}
+                    />
+                    <button
+                      style={{padding:'6px 16px',borderRadius:6,border:'1px solid #2563eb',background:'#2563eb',color:'#fff',fontWeight:600,cursor:'pointer',fontSize:15,whiteSpace:'nowrap'}}
+                      onClick={async()=>{if(pendingRoutineFails?.[routine.id]?.reason){await routinesApi.fail(routine.id,{date:selectedDate,reason:pendingRoutineFails[routine.id].reason||'',mood:pendingRoutineFails[routine.id].mood||'',context:pendingRoutineFails[routine.id].context||''}); queryClient.invalidateQueries({ queryKey: ['routines'] });}}}
+                    >저장</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div style={{marginTop:24,textAlign:'right'}}>
+            <button style={{fontSize:16,padding:'8px 20px',borderRadius:8,background:'#2563eb',color:'#fff',border:'none',cursor:'pointer',fontWeight:700}} onClick={()=>{setFeedbackOpen(false);navigate(`/emotion-journal?date=${selectedDate}`);}}>
+              감정일기 작성하러 가기
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <PageContainer>
       {/* 1. 맨 위: 현재 시간, 추천/격려 메시지 */}
@@ -342,8 +575,26 @@ export const Dashboard: React.FC = () => {
           <div style={{fontSize:32,fontWeight:700}}>{now}</div>
           <div style={{fontSize:18,color:'#2563eb',marginTop:4}}>오늘도 힘내세요! 할 수 있습니다 💪</div>
         </div>
-        <input type="date" value={selectedDate} onChange={e=>setSelectedDate(e.target.value)} style={{fontSize:18,padding:8,borderRadius:8,border:'1px solid #ddd'}} />
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <input type="date" value={selectedDate} onChange={e=>setSelectedDate(e.target.value)} style={{fontSize:18,padding:8,borderRadius:8,border:'1px solid #ddd'}} />
+          {feedbackDone ? (
+            <span style={{background:'#22c55e',color:'#fff',padding:'6px 16px',borderRadius:8,fontWeight:600,fontSize:16}}>피드백 완료</span>
+          ) : (
+            <button style={{fontSize:16,padding:'8px 16px',borderRadius:8,background:'#2563eb',color:'#fff',border:'none',cursor:'pointer'}} onClick={()=>setFeedbackOpen(true)}>
+              피드백
+            </button>
+          )}
+        </div>
       </div>
+      {/* 피드백 모달 (구현 예정) */}
+      {feedbackOpen && (
+        <div style={{position:'fixed',top:0,left:0,width:'100vw',height:'100vh',background:'rgba(0,0,0,0.2)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{background:'#fff',borderRadius:16,padding:32,minWidth:400,minHeight:200,boxShadow:'0 4px 32px rgba(0,0,0,0.12)',maxWidth:600,position:'relative'}}>
+            <button onClick={()=>setFeedbackOpen(false)} style={{position:'absolute',top:16,right:16,width:32,height:32,border:'none',background:'transparent',fontSize:24,cursor:'pointer',color:'#888',zIndex:10}} aria-label="닫기">×</button>
+            {renderFeedbackModal()}
+          </div>
+        </div>
+      )}
       {/* 2. 오늘의 할일/루틴/기타할일 리스트 */}
       <Card>
         <SectionTitle>{selectedDate === today ? '오늘의 할일' : `${selectedDate}의 할일`}</SectionTitle>
@@ -351,9 +602,17 @@ export const Dashboard: React.FC = () => {
           {[...filteredTasks, ...filteredRoutines, ...filteredOtherTasks].length === 0 && <div>할일이 없습니다.</div>}
           {filteredTasks.map(task => (
             <TaskRow key={task.id}>
-              <TaskCheckbox checked={task.checked} onChange={e=>handleTaskCheck(task.id, e.target.checked)} />
-              <TaskTitle $completed={task.checked}>{task.title}</TaskTitle>
-              <Badge $bg="#bbf7d0" $color="#15803d">할일</Badge>
+              {isDeferredTask(task) ? (
+                <>
+                  <TaskTitle $completed={false}>{task.title} <Badge $bg="#fef08a" $color="#b45309">미룸</Badge> <span style={{fontSize:12,color:'#b45309'}}>(→ {task.due_date})</span></TaskTitle>
+                </>
+              ) : (
+                <>
+                  <TaskCheckbox checked={task.checked} onChange={e=>handleTaskCheck(task.id, e.target.checked)} />
+                  <TaskTitle $completed={task.checked}>{task.title}</TaskTitle>
+                  <Badge $bg="#bbf7d0" $color="#15803d">할일</Badge>
+                </>
+              )}
             </TaskRow>
           ))}
           {filteredRoutines.map(routine => {
@@ -376,7 +635,7 @@ export const Dashboard: React.FC = () => {
           <SectionTitle>진행중인 프로젝트</SectionTitle>
           {filteredProjects.length === 0 && <div>진행중인 프로젝트가 없습니다.</div>}
           {filteredProjects.map(p => (
-            <GoalItem key={p.id}>
+            <GoalItem key={p.id} style={{cursor:'pointer'}} onClick={() => navigate(`/project/${p.id}`)}>
               <GoalInfo>
                 <div style={{fontWeight:600,fontSize:'1rem',color:'#111827',marginBottom:2}}>{p.title}</div>
                 {p.description && <div style={{fontSize:'0.95rem',color:'#4b5563'}}>{p.description}</div>}
@@ -389,7 +648,7 @@ export const Dashboard: React.FC = () => {
           <SectionTitle>진행중인 마일스톤</SectionTitle>
           {filteredMilestoneGroups.length === 0 && <div>진행중인 마일스톤이 없습니다.</div>}
           {filteredMilestoneGroups.map(m => (
-            <GoalItem key={m.id}>
+            <GoalItem key={m.id} style={{cursor:'pointer'}} onClick={() => navigate(`/milestone-group/${m.id}`)}>
               <GoalInfo>
                 <div style={{fontWeight:600,fontSize:'1rem',color:'#111827',marginBottom:2}}>{m.title}</div>
                 {m.description && <div style={{fontSize:'0.95rem',color:'#4b5563'}}>{m.description}</div>}
@@ -399,26 +658,6 @@ export const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* 빠른 액션 */}
-      <Card>
-        <QuickActionBox>
-          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 64, height: 64, background: '#3b82f6', borderRadius: '9999px', marginBottom: 16 }}>
-            <Zap style={{ width: 32, height: 32, color: '#fff' }} />
-          </div>
-          <SectionTitle style={{ marginBottom: 8 }}>빠른 시작</SectionTitle>
-          <SectionSub style={{ marginBottom: 24, display: 'block' }}>새로운 목표나 프로젝트를 만들어보세요!</SectionSub>
-          <QuickActionBtnRow>
-            <QuickActionBtn $primary>
-              <Target style={{ width: 16, height: 16, marginRight: 8 }} />
-              목표 만들기
-            </QuickActionBtn>
-            <QuickActionBtn>
-              <Calendar style={{ width: 16, height: 16, marginRight: 8 }} />
-              프로젝트 시작
-            </QuickActionBtn>
-          </QuickActionBtnRow>
-        </QuickActionBox>
-      </Card>
     </PageContainer>
   );
 }; 

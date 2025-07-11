@@ -20,7 +20,7 @@ const navigation = [
   { name: '홈', href: '/', icon: Home },
   { name: '목표 트리', href: '/tree', icon: GitBranch },
   { name: '루틴', href: '/routines', icon: Repeat },
-  { name: '감정일기', href: '/emotion', icon: Heart },
+  { name: '감정일기', href: '/emotion-journal', icon: Heart },
   { name: '캘린더', href: '/calendar', icon: Calendar },
   { name: '분석', href: '/analysis', icon: BarChart3 },
   { name: '아이디어', href: '/aspiration', icon: Lightbulb },
@@ -198,7 +198,7 @@ export const Sidebar: React.FC = () => {
             {navigation.map((item) => {
               const isActive = location.pathname === item.href;
               return (
-                <NavLink key={item.name} to={item.href} $active={isActive}>
+                <NavLink key={item.name} to={item.href} $active={isActive} onClick={() => setCollapsed(true)}>
                   <item.icon style={{ width: 20, height: 20 }} />
                   {item.name}
                 </NavLink>

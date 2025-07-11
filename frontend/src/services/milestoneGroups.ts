@@ -6,6 +6,8 @@ export interface MilestoneGroup {
   title: string;
   parent_id?: number | null;
   parent_type?: 'goal' | 'project' | null;
+  description?: string;
+  deleted?: boolean;
   // 필요한 필드 추가
 }
 

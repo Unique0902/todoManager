@@ -27,6 +27,8 @@ import TaskDetailPage from './pages/TaskDetailPage';
 import RoutineDetailPage from './pages/RoutineDetailPage';
 import MilestoneGroupDetailPage from './pages/MilestoneGroupDetailPage';
 import RoutinesPage from './pages/RoutinesPage';
+import EmotionJournalCreatePage from './pages/EmotionJournalCreatePage';
+import EmotionJournalListPage from './pages/EmotionJournalListPage';
 
 // 글로벌 테마 정의
 const theme = {
@@ -214,6 +216,8 @@ function App() {
                   </Layout>
                 </ProtectedRoute>
               } />
+              <Route path="/emotion-journal/new" element={<Layout><EmotionJournalCreatePage /></Layout>} />
+              <Route path="/emotion-journal" element={<Layout><EmotionJournalListPage /></Layout>} />
               {/* 임시로 대시보드만 구현 */}
               <Route path="*" element={
                 <ProtectedRoute>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const Container = styled.div`
   max-width: 480px;
@@ -56,11 +56,13 @@ const MOOD_OPTIONS = [
 ];
 
 export default function EmotionJournalCreatePage() {
-  const [date, setDate] = useState('');
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const initialDate = params.get('date') || '';
+  const [date, setDate] = useState(initialDate);
   const [content, setContent] = useState('');
   const [moodTag, setMoodTag] = useState('');
   const [customMood, setCustomMood] = useState('');
-  const [linkedRoutineId, setLinkedRoutineId] = useState('');
   const navigate = useNavigate();
 
   const handleMoodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -74,7 +76,6 @@ export default function EmotionJournalCreatePage() {
       date,
       content,
       mood_tag: moodTag === '직접입력' ? customMood : moodTag,
-      linked_routine_id: linkedRoutineId ? Number(linkedRoutineId) : undefined,
     });
     navigate(-1);
   };
@@ -95,8 +96,6 @@ export default function EmotionJournalCreatePage() {
         {moodTag === '직접입력' && (
           <Input value={customMood} onChange={e => setCustomMood(e.target.value)} placeholder="감정 직접입력" />
         )}
-        <Label>연결 루틴 ID (선택)</Label>
-        <Input type="number" value={linkedRoutineId} onChange={e => setLinkedRoutineId(e.target.value)} />
         <Button type="submit">저장</Button>
       </form>
     </Container>

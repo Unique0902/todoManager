@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Query
 from sqlmodel import Session, select
 from typing import List
 from ..models.emotion_journal import EmotionJournal
@@ -16,9 +16,12 @@ def create_emotion_journal(journal: EmotionJournal, session: Session = Depends(g
     session.refresh(journal)
     return journal
 
-# EmotionJournal 전체 조회
+# EmotionJournal 전체 조회 (date 쿼리 지원)
 @router.get("/", response_model=List[EmotionJournal])
-def read_emotion_journals(session: Session = Depends(get_session)):
+def read_emotion_journals(date: str = Query(None), session: Session = Depends(get_session)):
+    if date:
+        journals = session.exec(select(EmotionJournal).where(EmotionJournal.date == date)).all()
+        return journals
     journals = session.exec(select(EmotionJournal)).all()
     return journals
 

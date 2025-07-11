@@ -4,6 +4,7 @@ from typing import List
 from ..models.task import Task
 from ..database import get_session
 from datetime import datetime
+import json
 
 router = APIRouter()
 
@@ -58,6 +59,7 @@ def update_task(task_id: int, task_update: Task, session: Session = Depends(get_
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
     update_data = task_update.model_dump(exclude_unset=True)
+    # parent_id 유효성 검사 등 기존 코드 유지
     if "parent_id" in update_data and update_data["parent_id"] is not None:
         if update_data["parent_id"] == task_id:
             raise HTTPException(status_code=400, detail="자기 자신을 부모로 지정할 수 없습니다.")
@@ -77,6 +79,22 @@ def update_task(task_id: int, task_update: Task, session: Session = Depends(get_
             parent = None
         if not parent or getattr(parent, 'deleted', False):
             raise HTTPException(status_code=400, detail="parent_id에 해당하는 부모가 존재하지 않습니다.")
+    # history_log: due_date 변경 시 이력 append
+    old_due_date = db_task.due_date
+    new_due_date = update_data.get("due_date", old_due_date)
+    if old_due_date != new_due_date:
+        try:
+            history = json.loads(db_task.history_log or "[]")
+        except Exception:
+            history = []
+        history.append({
+            "changed_at": datetime.utcnow().isoformat(),
+            "field": "due_date",
+            "before": str(old_due_date),
+            "after": str(new_due_date),
+            "reason": update_data.get("history_reason", "날짜 변경")
+        })
+        db_task.history_log = json.dumps(history, ensure_ascii=False)
     for key, value in update_data.items():
         setattr(db_task, key, value)
     db_task.updated_at = datetime.utcnow()

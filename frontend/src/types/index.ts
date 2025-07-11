@@ -47,6 +47,7 @@ export interface Task extends BaseNode {
   is_milestone?: boolean;
   milestone_date?: string;
   order_index?: number;
+  history_log?: string | null;
 }
 
 // 기타 할일 노드
